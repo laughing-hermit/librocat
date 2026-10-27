@@ -1,0 +1,30 @@
+{
+  "name": "librocat",
+  "displayName": "librocat",
+  "description": "The Open-Source Knowledge Base for AI Agents. Tell one agent once, and every agent remembers: Claude Code, Codex, Cursor, Copilot, and every teammate's agent share one library, and Libro, an AI librarian, keeps it organized and current. Connects to librocat.com (sign in once in your browser) and adds the skills that teach an agent to use it well.",
+  "author": {
+    "name": "librocat",
+    "email": "support@librocat.com"
+  },
+  "homepage": "https://librocat.com",
+  "repository": "https://github.com/laughing-hermit/librocat",
+  "license": "Apache-2.0",
+  "logo": "assets/logo.png",
+  "keywords": [
+    "mcp",
+    "knowledge-base",
+    "okf",
+    "library-science",
+    "memory",
+    "ai-memory",
+    "agent-plugin",
+    "agent-skills"
+  ],
+  "category": "developer-tools",
+  "skills": "./skills/",
+  "mcpServers": {
+    "librocat": {
+      "url": "https://librocat.com/mcp"
+    }
+  }
+}

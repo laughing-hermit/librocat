@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * librocat has one theme, light: white and library green on every device
+ * (the layout's viewport says `only light`, so browsers don't darken it
+ * either). Nothing sets `.dark`, so the `dark:` classes inside the shadcn
+ * components never apply.
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Type: IBM Plex Sans for everything in the app, titles included
+ * (`font-heading` is the sans). Literata, the book face, is `font-serif`:
+ * only the public pages' headlines use it, so the site reads like a printed
+ * page and the app like a tool. Plex Mono is for commands, ids, and code.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-brand: var(--brand);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * White paper, near-black ink, and library green (#1F744F, the logo's
+ * badge) as the one accent: buttons, links, focus, and progress. Everything
+ * tinted is a pale shade of that green.
+ */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.205 0.012 160);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0.012 160);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.205 0.012 160);
+  --primary: oklch(0.5 0.1 160);
+  /* The wordmark's "cat": the logo's green (--primary, #1F744F) a step
+     darker, because thin type reads lighter than the logo's solid shape. */
+  --brand: oklch(0.42 0.1 160);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0.014 160);
+  --secondary-foreground: oklch(0.3 0.06 160);
+  --muted: oklch(0.975 0.008 160);
+  --muted-foreground: oklch(0.48 0.02 160);
+  --accent: oklch(0.96 0.02 160);
+  --accent-foreground: oklch(0.3 0.07 160);
+  --destructive: oklch(0.577 0.245 27.325);
+  --warning: oklch(0.769 0.188 70.08);
+  --border: oklch(0.92 0.012 160);
+  --input: oklch(0.92 0.012 160);
+  --ring: oklch(0.5 0.1 160);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0.006 160);
+  --sidebar-foreground: oklch(0.205 0.012 160);
+  --sidebar-primary: oklch(0.5 0.1 160);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.955 0.02 160);
+  --sidebar-accent-foreground: oklch(0.3 0.07 160);
+  --sidebar-border: oklch(0.92 0.012 160);
+  --sidebar-ring: oklch(0.5 0.1 160);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

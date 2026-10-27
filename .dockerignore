@@ -1,0 +1,14 @@
+# The self-host image (self-host/Dockerfile) builds from the repository;
+# nothing local, built, or secret goes into it.
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/.env
+**/.env.*
+!.env.example
+.git
+.vercel
+.convex
+self-host/.env
+okf

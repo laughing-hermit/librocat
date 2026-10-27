@@ -1,0 +1,23 @@
+name: IndexNow
+# Tells Bing (whose index ChatGPT search and Copilot read) and the other
+# IndexNow engines that librocat.com's public pages changed, so they crawl
+# them again. Run it by hand after the landing page or the legal pages
+# change: Actions, IndexNow, Run workflow. The key is public by design: it
+# only proves the site asked, from apps/web/public/<key>.txt.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          KEY: 25c941f581f4df9d6a3d8f71b0fd7d56
+        run: |
+          urls=$(curl -fsS https://librocat.com/sitemap.xml | grep -o '<loc>[^<]*</loc>' | sed -e 's/<loc>//' -e 's#</loc>##' | jq -R . | jq -s .)
+          jq -n --arg key "$KEY" --argjson urls "$urls" \
+            '{host: "librocat.com", key: $key, keyLocation: ("https://librocat.com/" + $key + ".txt"), urlList: $urls}' |
+            curl -fsS -o /dev/null -w 'IndexNow answered %{http_code}\n' -X POST https://api.indexnow.org/indexnow \
+              -H 'content-type: application/json; charset=utf-8' --data-binary @-

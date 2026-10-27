@@ -1,0 +1,1539 @@
+{
+  "concepts": [
+    {
+      "id": "architecture/principles",
+      "type": "Note",
+      "title": "Principles",
+      "description": "- **Cloud is built on the Local core.",
+      "tags": ["architecture"],
+      "body": "- **Cloud is built on the Local core.** Everything that is not storage lives\n  once, in `packages/core`: `format.ts` (pure: the OKF text format, ids and\n  their canonical form, link extraction and retargeting, snippets, statuses,\n  frontmatter construction, the weeding rules, the status counts, the graph\n  walk) and `library.ts` (pure: thesaurus, query expansion, finding aids,\n  shelves). Both are free of `node:*` imports, so the Convex runtime imports\n  them as `@librocat/core/format` and `@librocat/core/library`. Local wraps\n  them around files and Orama (`okf.ts`, `memindex.ts`, `service.ts`); Cloud\n  wraps them around Convex rows (`apps/web/convex/model.ts`). What stays\n  per tier is storage: files vs rows, Git log vs the revisions table, the\n  Orama ranking vs the Convex search index, and Cloud's quotas, credits, and\n  circulation. `packages/core/tests/format.test.ts` is the contract both\n  tiers inherit. A new pure rule goes into `format.ts`, never into\n  `model.ts`.\n- **OKF is the format; the index is derived and rebuildable.** Local's\n  source of truth is the user's Git repo; Cloud's is the workspace, exported\n  as the same OKF files; `librocat pull` writes them into a Git repo.\n- **The MCP is the only full read/write interface.** The dashboard manages the\n  system (billing, connected agents, the team, export/delete) and browses\n  read-only.\n- **No database locally.** The Local index lives in memory, rebuilt from the\n  files at launch. Rebuilds take milliseconds at local scale.\n- **Stateless remote MCP, OAuth 2.1.** Every request carries the agent's\n  access token (Better Auth on Convex is the authorization server,\n  `apps/web/convex/auth.ts`); the route verifies it (mcp-handler\n  `withMcpAuth`), Convex verifies it again, and every Convex function\n  resolves the workspace from the user it names. No session state, no API\n  tokens."
+    },
+    {
+      "id": "architecture/packages",
+      "type": "Note",
+      "title": "Packages",
+      "description": "| Path | What it is | |------|------------| | `packages/core` | OKF read/write, the in-memory Orama index, the Service; `.",
+      "tags": ["architecture"],
+      "body": "| Path | What it is |\n|------|------------|\n| `packages/core` | OKF read/write, the in-memory Orama index, the Service; `./library` (thesaurus, tag normalization, finding aids) is runtime-neutral and shared with the Convex backend |\n| `packages/mcp` | The `librocat` CLI (bundled to one file, published as `packages/npm`): the local server over HTTP (`start`) or stdio (`mcp`), `login` (OAuth), `push`/`pull`, and the stdio bridge to the hosted MCP (`mcp --remote`); `src/tools.ts` is the shared tool table (`@librocat/server/tools`) |\n| `apps/web` | Next.js dashboard + landing (shadcn/ui), the remote MCP route (`src/app/mcp`), Convex backend in `convex/` |\n| `plugin/` | The Agent Plugin ([agent-plugins.org](https://agent-plugins.org)): the remote MCP entry and `skills/`, the Agent Skills ([agentskills.io](https://agentskills.io)); the root `skills` links there |"
+    },
+    {
+      "id": "architecture/search",
+      "type": "Note",
+      "title": "Search",
+      "description": "- Local: Orama (pure TypeScript, bm25).",
+      "tags": ["architecture"],
+      "body": "- Local: Orama (pure TypeScript, bm25). The schema indexes title, description,\n  body, tags, and type. Filters (`type`, `tag`, `status`) apply after ranking.\n- Cloud: a Convex search index over one concatenated `searchText` field on the\n  `bodies` table (body + search text live apart from the catalog record, so\n  the metadata paths stay small), with `workspaceId`, `type`, and `status`\n  as filter fields.\n\nBoth expand the query through the tag thesaurus first (`@librocat/core/library`,\nthe one core module Cloud imports — it must stay free of `node:fs`), map a\n`tag` facet through it, and sink deprecated hits below live ones unless\n`status` is filtered. Both return the same result shape, with a bracketed\n`[match]` snippet on the reader's own words."
+    },
+    {
+      "id": "cloud/stack",
+      "type": "Note",
+      "title": "Stack",
+      "description": "| Piece | Service | |-------|---------| | Remote MCP endpoint | Next.",
+      "tags": ["cloud"],
+      "body": "| Piece | Service |\n|-------|---------|\n| Remote MCP endpoint | Next.js route on Vercel (`/mcp`): [mcp-handler](https://github.com/vercel/mcp-handler) 2.x over the official MCP SDK v2 |\n| Database + functions + scheduled indexation | Convex |\n| Auth | Better Auth on Convex (`@convex-dev/better-auth`): email + password with emailed codes for the dashboard, and the OAuth 2.1 authorization server for the MCP |\n| Dashboard + landing | Next.js on Vercel (shadcn/ui) |\n| Billing | Stripe Checkout + a Billing Meter for pay-as-you-go index credits |\n| Automatic indexation | Vercel AI Gateway: Jev (`typesafe-ai/jev`, typed judgments) first, `google/gemini-3.8-flash` for what Jev cannot fill (paid plans) |"
+    },
+    {
+      "id": "cloud/how-the-remote-mcp-works",
+      "type": "Note",
+      "title": "How the remote MCP works",
+      "description": "- The endpoint is `https://librocat.",
+      "tags": ["cloud"],
+      "body": "- The endpoint is `https://librocat.dev/mcp` (in development\n  `http://localhost:3000/mcp`). It speaks stateless Streamable HTTP: the\n  2026-07-28 MCP revision natively, and 2025-era clients through the SDK's\n  stateless fallback. GET/DELETE session calls answer 405 by design.\n- Clients authenticate with OAuth 2.1, the way remote MCP servers such as\n  Stripe's, Vercel's, and Resend's do: no header to configure, no token to\n  copy. A call without a token gets a 401 whose `WWW-Authenticate` names the\n  protected-resource metadata (`/.well-known/oauth-protected-resource/mcp`),\n  which names the authorization server (`https://librocat.dev/api/auth`).\n  The agent registers itself (dynamic client registration), opens the\n  browser for the user to sign in and approve it on `/consent`, and comes\n  back with a one-hour JWT access token bound to `https://librocat.dev/mcp`\n  plus a refresh token.\n- The route verifies the token against Better Auth's JWKS, registers the\n  same tool table as the Local server (`packages/mcp/src/tools.ts`) over a\n  Convex backend (`apps/web/src/lib/mcp-backend.ts`), and calls each Convex\n  function in `apps/web/convex/mcp.ts` with that same token. Convex checks it\n  again (`convex/auth.config.ts`), resolves the workspace from the user it\n  names, and checks the agent still holds the user's grant, so a disconnect\n  on the dashboard takes effect on the agent's next call.\n- Tools: the same surface as Local, minus `ingest_repo` and `reindex` (there\n  is no filesystem on this endpoint) — fifteen tools. See\n  [mcp-tools.md](./mcp-tools.md). Concept bodies are capped at 64 KB.\n- Concepts live in a Convex table with a search index. Links live in a second\n  table, so `neighbors` and `graph` stay indexed queries. Revisions live in a\n  third: every `ingest`, `update`, `rename`, and automatic indexation appends\n  a full snapshot, so `history` is the workspace's commit log and any past\n  revision is readable. Cloud needs no Git repo; export the OKF zip when you\n  want the files in one."
+    },
+    {
+      "id": "cloud/two-ways-to-reach-it-directly-or-through-the-lib",
+      "type": "Note",
+      "title": "Two ways to reach it: directly, or through the librocat CLI",
+      "description": "Everything above describes the endpoint itself: any MCP client that speaks remote MCP connects to `https://librocat.",
+      "tags": ["cloud"],
+      "body": "Everything above describes the endpoint itself: any MCP client that speaks\nremote MCP connects to `https://librocat.dev/mcp` and runs the OAuth sign-in\n(the Agent Plugin's `mcp.json` is exactly that URL).\n\nFor an agent that can only spawn stdio servers, `librocat mcp --remote`\n(the npm package) bridges stdio to this endpoint over the official MCP\nclient SDK (`packages/mcp/src/remote-backend.ts`), signed in with `librocat\nlogin` (`packages/mcp/src/oauth.ts`). It registers the exact tool table\nabove, plus `ingest_repo` (it has a filesystem, so it reads a repo on your\ndisk and writes the result here) and `reindex` as a documented no-op, so its\ntool list matches the local server's seventeen. See\n[docs/local.md §Local and hosted, together](./local.md#local-and-hosted-together)."
+    },
+    {
+      "id": "cloud/auth-oauth-2-1-one-identity-for-both-doors",
+      "type": "Note",
+      "title": "Auth: OAuth 2.1, one identity for both doors",
+      "description": "Better Auth runs inside the Convex deployment (`convex/auth.",
+      "tags": ["cloud"],
+      "body": "Better Auth runs inside the Convex deployment (`convex/auth.ts`, installed\nlocally under `convex/betterAuth` because the OAuth provider adds tables).\nThe same user signs in to the dashboard and approves agents; a write through\nthe MCP records both (`revisions.userId`, `revisions.client`). Next.js\nproxies `/api/auth/*` to the Convex site (`src/lib/auth-server.ts`) and\nserves the discovery documents at the site root (`src/app/.well-known`).\n\n- Access tokens: RS256 JWTs, `iss` = `SITE_URL/api/auth`, `aud` =\n  `SITE_URL/mcp`, one hour. Refresh tokens rotate on use.\n- Connected agents: the Connect page lists every agent the user approved\n  (`convex/agents.ts`) and disconnects one immediately.\n- Teams: each person has their own account; an admin shares an invite link\n  (`convex/team.ts`, `/invite/[code]`), up to 10 seats on Team.\n- Not built yet: client ID metadata documents (the MCP 2026-07-28\n  preference over dynamic registration) wait for `@convex-dev/better-auth`\n  to support Better Auth 1.7 (`@better-auth/cimd`)."
+    },
+    {
+      "id": "cloud/automatic-indexation-and-index-credits",
+      "type": "Note",
+      "title": "Automatic indexation and index credits",
+      "description": "What hosted does that a local library leaves to your agent.",
+      "tags": ["cloud"],
+      "body": "What hosted does that a local library leaves to your agent. After an\n`ingest` or `update` that leaves a concept **without a description or without\ntags**, a scheduled Convex action (`convex/indexation.ts`) catalogs it, in\nthe cheapest stage that can do the job:\n\n1. It reserves one **index credit** in a mutation (atomic).\n2. **Code** builds the candidates: up to eight prose sentences from the body\n   (5 to 40 words each) for the description, and up to 40 tags from the\n   library's vocabulary (tags used on the concept's shelf first, then the\n   rest, then the thesaurus's unused preferred tags). Each tag carries its\n   scope note and up to three titles already filed under it, the shelf list\n   a cataloger checks before choosing a heading.\n3. **Jev** (`typesafe-ai/jev` through the AI Gateway's `/v1/evaluate`,\n   override with `LIBROCAT_EVAL_MODEL`) answers typed questions in one\n   request: which candidate sentence works as the description (or none), and\n   one yes/no per candidate tag, judged against its scope note and shelf\n   list. Jev selects; it never writes text, so a transcribed description\n   cannot invent a fact. Its input costs $0.042 per million tokens and its\n   output is free, a small fraction of a generative call; each call's real\n   cost is in the log line below.\n4. **Gemini**, on Individual and Team only: whatever Jev could not fill goes\n   to `google/gemini-3.8-flash` (override with `LIBROCAT_AI_MODEL`), which\n   writes a one-sentence description or tags, told the existing vocabulary\n   so it reuses terms instead of coining synonyms. **Then Jev checks it**:\n   the description is kept only when Jev finds everything it says in the\n   concept (probability 0.8 or more), and each tag only when Jev finds it a\n   subject of the concept (0.6 or more). If Jev cannot be reached, nothing\n   Gemini wrote is kept. On Free the blank stays for the writing agent.\n5. It writes only what the writer left blank, files under the most specific\n   tag (a broader tag goes when a narrower one is there, Cutter's rule of\n   specific entry), records how in `cataloged` (`description: transcribed |\n   generated`, `tags: selected | generated`, `by`, `at`), and stamps\n   `indexed_at`. When nothing could be filled, the credit is refunded. The\n   log line `{\"indexation\":{\"jev\":…,\"generated\":…,\"verified\":…}}` records each\n   stage and its cost.\n\nGemini and Libro's sessions ask the gateway for zero data retention\n(`providerOptions.gateway.zeroDataRetention`). Jev cannot: the gateway lists\nno zero-retention provider for it (`\"zdr\": \"none\"` in\n`https://ai-gateway.vercel.sh/v1/models`) and refuses such a request with a\n400. Every default model is listed `\"no_training\": \"all\"`.\n\nCredits per calendar month (UTC): Free 500, Individual 500, Team 2,500\n(`INDEX_CREDITS` in `convex/model.ts`). Past the included credits, a paid\nworkspace continues only when it turned **pay-as-you-go** on in Billing:\n$0.01 per extra concept (`INDEX_CREDIT_OVERAGE_CENTS`), reported to a Stripe\nBilling Meter per concept. Otherwise indexation pauses until next month.\n`status` reports `index_credits` (`included`, `used`, `remaining`, `overage`,\n`pay_as_you_go`, `period`); the Overview shows the bar; Billing has the\nswitch. Agents that already catalog fully (the okf-authoring skill) spend\nnothing.\n\nEnv on the Convex deployment: `AI_GATEWAY_API_KEY`, optional\n`LIBROCAT_EVAL_MODEL`, `LIBROCAT_AI_MODEL`, `LIBROCAT_AI_GATEWAY_URL`."
+    },
+    {
+      "id": "cloud/libro-the-library-cat",
+      "type": "Note",
+      "title": "Libro, the library cat",
+      "description": "librocat's librarian is a library cat named Libro.",
+      "tags": ["cloud"],
+      "body": "librocat's librarian is a library cat named Libro. In the hosted library,\nLibro is the automated work on a library that people and agents should not\nhave to do:\n\n- **Automatic cataloging** (index credits, above): Libro fills a missing\n  description or tags after `ingest`/`update`.\n- **The review shelf** (`convex/libro.ts`, table `proposals`): once a week\n  (cron, Monday 07:00 UTC) or on \"Ask Libro now\" (Overview), Libro reads\n  the library and files proposals: *supersede* (two concepts with the same\n  title, or the same name on two shelves; the older is superseded by the\n  newer), *retire* (a stable concept that already carries `superseded_by`,\n  or one never read in 90 days), *merge tag* (two spellings of one tag; the\n  rarer becomes a `use_for` of the common one in the thesaurus). Libro\n  proposes, the user disposes: Approve applies the change as a revision\n  `by: \"libro\"`, Dismiss files it away for good (one proposal per kind,\n  subject, target, ever). `status` reports `review_shelf`, the open count.\n  *Past its date*: a live concept whose OKF `stale_after` has passed. **Still\n  true** records the person's check (OKF `verified`, `human:<id>`) and moves\n  the date 90 days ahead; **Retire** deprecates it. The date is part of the\n  proposal's key, so a concept comes back when its new date passes.\n  Every plan gets this mechanical pass; it calls no model. On Free the\n  weekly pass runs when something was written since the last one, and\n  monthly while the library sits idle, so an idle library costs nothing.\n- **Jev's screens, every plan**, after every review, when the deployment\n  has `AI_GATEWAY_API_KEY`. No generative model; a fraction of a cent a\n  run.\n  - **Review dates** (`libro.datesScreen`): Jev reads what changed since it\n    last looked. For anything tied to a date, a version, a price, or a\n    person, a *Review date* proposal: set it, or dismiss it.\n  - **Concept embeddings** (`convex/similar.ts`): each concept (title,\n    description, the first 2,000 characters of the body) is embedded by the\n    model the reference desk uses.\n    - One 256-dimension vector per concept, in `conceptVectors` (vector\n      index).\n    - Embedded again when the concept changes, and deleted with it.\n    - At most 512 concepts a run; a bigger library continues in the next\n      run.\n  - **Duplicates by meaning:** each concept embedded in the run looks up\n    its four nearest.\n    - Pairs at cosine 0.75 or more that don't share a title go to Jev: up\n      to 20, with the eve screen's \"same subject?\" question.\n    - Confirmed pairs go on the shelf as supersede proposals.\n  - **No answer:** the questions agents asked in the last 30 days and found\n    no answer to (up to 10, most asked first) are embedded as queries.\n    - Up to three concepts per question, at cosine 0.45 or more and\n      written before the question was last asked, go to Jev: \"is this\n      concept about what was asked?\"\n    - At 0.8 or more, a `gap` proposal. **Mark stale** sets the concept's\n      `stale_after` to today, so every read says `stale: true` until\n      someone verifies or updates it.\n    - **Dismiss** is for good: one per concept and question, ever.\n  - **Failures:** when a call fails, nothing is marked done, and the next\n    review retries.\n  - **Checking the live model:** `npx convex run embeddings:probe`.\n- **Libro proper, the eve agent** (`agents/libro`, Vercel eve), Individual\n  and Team only: when the deployment knows where Libro lives (`LIBRO_URL` +\n  `LIBRO_SECRET` on Convex), every review also summons an eve session for the\n  workspace, one Libro credit each (`LIBRO_CREDITS`: 20/mo on Individual,\n  100/mo on Team, then $0.10 a run with pay-as-you-go). **Jev screens\n  first**: code pairs concepts on one shelf that share two or more tags or\n  most of a title, and Jev judges up to 20 pairs (\"the same subject?\") in\n  one request. Pairs it confirms go on the shelf as supersede proposals and\n  into the session's brief. When nothing is confirmed and nothing "
+    },
+    {
+      "id": "cloud/the-reference-desk-and-libros-weekly-report",
+      "type": "Note",
+      "title": "The reference desk and Libro's weekly report",
+      "description": "**The ready-reference file** (`convex/reference.",
+      "tags": ["cloud"],
+      "body": "**The ready-reference file** (`convex/reference.ts`). Every MCP `search` is\na question put to the library, so `search` is a mutation that files it:\n\n- **What is kept:** the query (capped at 300 characters), how many results\n  it found and the first five ids, and who asked (the person and the\n  agent).\n- **The answer:** the first of those results the same asker opens within\n  ten minutes (`get_concept`).\n- **Secrets:** a query that looks like it carries one is never kept.\n- **Retention:** questions are kept 90 days (a daily cron prunes them) and\n  go with the index when it is deleted.\n\nIn the background (`fileQuestion`, when the deployment has\n`AI_GATEWAY_API_KEY`):\n\n- **Grouping by meaning.** The question is embedded\n  (`convex/embeddings.ts`): Qwen3-Embedding-8B\n  (`alibaba/qwen3-embedding-8b`, open weights), pinned to DeepInfra, which\n  runs it in the US, and every request requires zero data retention.\n  - The embedding only proposes: the three nearest earlier questions\n    (cosine 0.5 or more).\n  - Jev decides whether the new question asks one of them again\n    (probability 0.8 or more). If it does, the question takes that\n    question's key, so rewordings count as one question.\n  - Its own key stays on it as `fold`, a \"see\" reference. The same words\n    asked again get the earlier answer with no new embedding.\n  - One 256-dimension vector is kept per distinct question\n    (`questionClusters`, vector index).\n  - Without a key, or without Jev's judgment, questions group by their\n    content words.\n- **Was it answered?** Search matches any word, so \"found something\" is not\n  \"found an answer\". In the same Jev request, Jev judges whether one of the\n  first three results answers the question. A question is unanswered when\n  it found nothing, or nothing Jev judged an answer.\n\nWhat it gives back:\n\n- **Ready reference:** a question asked again gets the concept that\n  answered it before as the first hit, marked `ready_reference: true`. A\n  rewording filed under it gets the same.\n- **The reference desk** on the Overview: the last 30 days, split into\n  \"Asked most\" (and what answered each) and \"No answer yet\": the gaps in\n  the collection, what to write down next.\n- **The concepts behind the gaps:** after each review, the concepts an\n  unanswered question is about go on the review shelf, to mark stale\n  (above).\n\n**Libro's weekly report** (`convex/report.ts`):\n\n- **What it covers:** what arrived and changed this week, what is past its\n  review date, what waits on the review shelf, what agents read, and the\n  questions that found no answer.\n- **Where it appears:** live on the Overview, and every Monday at 08:00 UTC\n  by email (Resend), an hour after Libro's review.\n- **Who gets the email:** admins by default. Each member turns it on or off\n  on the Overview.\n- **Unsubscribing:** every email carries a one-click unsubscribe (RFC 8058\n  `List-Unsubscribe`) that needs no sign-in: `/api/unsubscribe`, with an\n  HMAC of the member's id signed with `BETTER_AUTH_SECRET`.\n- **Empty libraries** get no email."
+    },
+    {
+      "id": "cloud/projects-are-shelves-not-libraries",
+      "type": "Note",
+      "title": "Projects are shelves, not libraries",
+      "description": "One workspace is one library: one thesaurus, one graph, one weeding report, one review shelf for Libro.",
+      "tags": ["cloud"],
+      "body": "One workspace is one library: one thesaurus, one graph, one weeding report,\none review shelf for Libro. Projects live on **shelves**, the leading\ndirectory of the concept id (`acme/…`, `billing/…`). `search` and `list`\ntake `shelf` to scope a read to one project; an agent working in that\nproject reads its shelf first and the whole library second, so a decision\nmade in one project is still found from another. Every shelf gets a finding\naid. Make a second library only when access must differ (a client under\nNDA, personal vs employer), never to get a per-project view."
+    },
+    {
+      "id": "cloud/several-libraries",
+      "type": "Note",
+      "title": "Several libraries",
+      "description": "A person can belong to several libraries, like Supabase projects: their own, and the teams they joined.",
+      "tags": ["cloud"],
+      "body": "A person can belong to several libraries, like Supabase projects: their own,\nand the teams they joined. Each library has its own members, plan, quota,\nreview shelf, and address for agents. Supabase's MCP takes the project in\nits URL (`?project_ref=`), and so does librocat's:\n\n- `https://librocat.dev/mcp` reaches your **default** library, the first\n  you joined. Every installed config keeps working, and an agent never\n  changes library by itself.\n- `https://librocat.dev/mcp?library=<slug>` reaches another one. A repo pins\n  its library with this URL in its `.mcp.json`. The dashboard's Library\n  settings and Connect pages show each library's URL. The CLI takes\n  `--library <slug>` (or `LIBROCAT_LIBRARY`).\n- One OAuth sign-in covers all of them. The library travels on the MCP URL,\n  never in the token: the token's audience stays `/mcp` (a resource has no\n  query, RFC 9728; the `/api/auth` proxy drops one a client sends), and\n  every call checks membership (`convex/mcp.ts`, `convex/membership.ts`). A\n  library you don't belong to answers \"no library\", never a fallback.\n- The dashboard shows one library at a time (the switcher at the top of the\n  sidebar). Switching changes the dashboard only; agents keep the library\n  their URL names.\n- **New library** makes one on the Free plan. A person can own two Free\n  libraries (`FREE_LIBRARIES` in `convex/model.ts`); a paid one never counts.\n  **Delete library** (its owner) removes it and everything in it and cancels\n  its plan. Deleting an account deletes every library its person owns.\n- Joining a team through an invite folds away your own library only if it is\n  empty and has no plan, so the team's becomes your default; one holding\n  knowledge stays, and the team's is reached by its slug."
+    },
+    {
+      "id": "cloud/plans-and-quota",
+      "type": "Note",
+      "title": "Plans and quota",
+      "description": "Account memory is measured in **concepts**, never in bytes.",
+      "tags": ["cloud"],
+      "body": "Account memory is measured in **concepts**, never in bytes.\n\n- Free: every new account. 1 user, 1,000 concepts, 500 index credits/mo\n  (Jev only, no Gemini), the mechanical review shelf, no Libro sessions, no\n  pay-as-you-go. No card.\n- Individual ($12/mo, or $10/mo billed yearly): 1 user, 5,000 concepts, 500\n  index credits/mo, 20 Libro sessions/mo, then pay as you go.\n- Team ($60/mo, or $50/mo billed yearly): up to 10 users, 15,000 concepts,\n  2,500 index credits/mo, 100 Libro sessions/mo, then pay as you go. Each\n  person signs in with their own account and joins through an invite link\n  (Team page).\n- Both paid plans check out through Stripe (one price per plan per\n  interval: `STRIPE_PRICE_ID_INDIVIDUAL`, `STRIPE_PRICE_ID_TEAM`,\n  `STRIPE_PRICE_ID_INDIVIDUAL_ANNUAL`, `STRIPE_PRICE_ID_TEAM_ANNUAL`, plus\n  the metered `STRIPE_PRICE_ID_INDEXATION` on every paid subscription).\n  When a subscription ends, the workspace returns to Free and keeps every\n  concept; new ones wait until it is under the Free limit.\n- The `ingest` mutation enforces the quota. Overwrites of existing concepts\n  always pass.\n- Every write is checked for secrets first (`assertNoSecrets` in\n  `packages/core/src/format.ts`: private keys and the key formats of AWS,\n  GitHub, Stripe, Anthropic, OpenAI, Slack, Google, and npm). A match is\n  refused with a pointer to record where the secret lives instead.\n- Self-hosting: `LIBROCAT_SELF_HOST=1` on the Convex deployment lifts every\n  limit, and on the Next.js app it hides Billing and the plan bars. Without\n  the flag the plan limits apply, so a hosted deployment never falls open by\n  accident. `self-host/` runs the whole service with Docker Compose on a\n  self-hosted Convex, with the flag set ([SELF_HOSTING.md](../SELF_HOSTING.md))."
+    },
+    {
+      "id": "cloud/your-data-export-and-delete",
+      "type": "Note",
+      "title": "Your data: export and delete",
+      "description": "The dashboard Overview has two controls (the control plane, not the editor): - **Export index** downloads the workspace as a plain OKF zip, with a finding aid (`index.",
+      "tags": ["cloud"],
+      "body": "The dashboard Overview has two controls (the control plane, not the editor):\n\n- **Export index** downloads the workspace as a plain OKF zip, with a\n  finding aid (`index.md`) per directory. The unzipped `okf/` directory drops\n  into the free Local tool (`LIBROCAT_BUNDLE=./okf`).\n- **Delete index** erases every concept, link, and revision after a\n  confirmation. (`delete` in the MCP weeds one concept the same way.)\n\nThe entrance is as open as the exit: `librocat push [dir]` (the CLI in\n`librocat`, once logged in) reads a local OKF bundle and writes every\nconcept into the logged-in workspace, so upgrading from Local does not mean\nstarting from an empty library.\n\nData gravity is the moat — lock-in is not. The exit door stays open on purpose."
+    },
+    {
+      "id": "cloud/local-development",
+      "type": "Note",
+      "title": "Local development",
+      "description": "The Convex project is `librocat` (team `<your-team>`, managed through the Vercel marketplace).",
+      "tags": ["cloud"],
+      "body": "The Convex project is `librocat` (team `<your-team>`, managed through\nthe Vercel marketplace). `pnpm exec convex dev` gives every logged-in developer\ntheir own dev deployment of it and writes `NEXT_PUBLIC_CONVEX_URL` to\n`apps/web/.env.local`:\n\n```bash\ncd apps/web\npnpm exec convex login                            # once per machine\npnpm exec convex dev                              # your dev deployment, keeps running\npnpm exec convex env set SITE_URL http://localhost:3000   # once per deployment\npnpm exec convex env set BETTER_AUTH_SECRET \"$(openssl rand -base64 32)\"\npnpm exec convex env set LIBROCAT_E2E 1                  # dev only: the e2e fixtures below\npnpm run dev                                      # dashboard + /mcp on :3000\n```\n\nWithout a Convex account, `CONVEX_AGENT_MODE=anonymous pnpm exec convex dev`\nruns a local Convex on :3210 instead; the rest is the same.\n\nSigning up in the dashboard sends a verification code through Resend. With no\n`AUTH_RESEND_KEY` on the deployment, set `AUTH_DEV_LOG_CODES=1`\n(`pnpm exec convex env set AUTH_DEV_LOG_CODES 1`) and the code is written to\nthe Convex log instead (`pnpm exec convex logs`). Never set it on prod.\n\nThen, with an access token signed for a fixture user (what an agent gets from\nthe OAuth flow, minus the browser):\n\n```bash\nLIBROCAT_MCP_TOKEN=$(pnpm exec convex run dev:issueTestAccessToken '{\"plan\":\"individual\"}' | jq -r .token) \\\nLIBROCAT_MCP_URL=http://localhost:3000/mcp pnpm test                              # remote MCP e2e\nLIBROCAT_MCP_URL=http://localhost:3000/mcp LIBROCAT_E2E_CLI_CWD=. pnpm test         # the whole OAuth flow\nLIBROCAT_E2E_CONVEX_URL=https://<your-dev>.convex.cloud pnpm test               # dashboard functions (or http://127.0.0.1:3210)\n```\n\nTo exercise automatic indexation and Jev without an AI Gateway key, start the\nfake gateway (`node tests/fake-gateway.ts`: chat completions and\n`/v1/evaluate`), point the local deployment at it (`pnpm exec convex env set\nAI_GATEWAY_API_KEY test` and `pnpm exec convex env set LIBROCAT_AI_GATEWAY_URL\nhttp://127.0.0.1:8787/v1`), and run the MCP e2e with `LIBROCAT_FAKE_GATEWAY=1`\n(and `tests/libro.e2e.test.ts` with `LIBROCAT_FAKE_EVE=1` too, for Libro's\nscreen). Unset the key again before the dashboard e2e, which expects no\ncataloging.\n\nTo exercise Libro's credit/overage path without a real eve deploy, start the\nfake eve (`node tests/fake-eve.ts`), point the local deployment at it\n(`pnpm exec convex env set LIBRO_URL http://127.0.0.1:8788` and `pnpm exec convex\nenv set LIBRO_SECRET test`), and run the dashboard e2e with\n`LIBROCAT_FAKE_EVE=1`. This one needs the CLI (`runNow`'s dev-only setup and\nthe mid-test `LIBRO_URL` flip) to administer the *same* deployment the test\nclient connects to — already true for the anonymous local backend above\n(`http://127.0.0.1:3210`), the one this path is meant to run against.\nPointed anywhere else instead (a scratch directory with its own local\nbackend, say), set `LIBROCAT_E2E_CLI_CWD` to that directory.\n\nProduction: the Vercel project `librocat` builds `apps/web` and runs `convex\ndeploy` in the same build (`apps/web/vercel.json`; the marketplace resource\nsyncs `CONVEX_DEPLOY_KEY`), so the functions on the prod deployment\n(`peaceful-panther-855`) always match the site. Preview builds skip the\ndeploy (Convex preview deployments need the Pro plan) and render the site\nwith no backend. Until the Vercel team is Pro, production deploys come from\n`vercel --prod` at the repo root (Hobby cannot git-connect a private org\nrepo; `.vercelignore` trims the upload). Until launch the project carries\n`LIBROCAT_COMING_SOON=1`: landing page only, no sign-up (`src/lib/coming-soon.ts`).\nEnv: `.env.example` lists every variable, with where it is set."
+    },
+    {
+      "id": "library-science/cutters-objects-of-the-catalog",
+      "type": "Note",
+      "title": "Cutter's objects of the catalog",
+      "description": "Cutter says a catalog exists to do three things.",
+      "tags": ["library-science"],
+      "body": "Cutter says a catalog exists to do three things. Here is how librocat does\neach.\n\n| Object (Cutter) | In librocat | Verdict |\n| --- | --- | --- |\n| Find a book whose **title** or **subject** is known | `search` (title, description, body, tags), expanded through the thesaurus; `get_concept` by id | Met |\n| Find a book whose **author** is known | `search`/`list` with `author`: a person (a member's email, or a Git author in Local), `me`, or an agent by name; `get_concept` lists a concept's `authors` | Met (2026-09-26) |\n| Show what the library has **on a subject** | `list`/`search` with `tag`, which now includes the tag's narrower terms; `thesaurus` shows the headings | Met, improved here |\n| Show what the library has **in a kind** of literature | `list`/`search` with `type` (Decision, Runbook, ...) and `shelf`; finding aids per directory | Met |\n| Help **choose** between books (edition, character) | The one-line `description`, `status` (draft, stable, deprecated), `superseded_by`, revisions, and now `cataloged` (how the record was made) | Met, improved here |"
+    },
+    {
+      "id": "library-science/validated-what-librocat-already-does-the-way-the",
+      "type": "Note",
+      "title": "Validated: what librocat already does the way the books say",
+      "description": "- **Controlled vocabulary.",
+      "tags": ["library-science"],
+      "body": "- **Controlled vocabulary.** Dana warns that «Domestic animals», «Farm\n  animals», and «Animals, domestic» for one subject \"scatter the\n  references\". His cure is a printed list of headings, checked every time.\n  librocat's thesaurus, the synonym folding on write (`use_for`), and Libro's\n  \"merge tag\" proposals are that cure, applied automatically.\n- **Cross-references.** Dana's cross-reference cards send a reader from\n  \"pigs\" to \"swine\" (see) and on to \"domestic animals\" (see also). librocat\n  has `use_for` for the first and `broader`/`narrower` for the second.\n- **Classify for the reader.** Dana: when unsure, file a book where its\n  readers will look for it. Jev's tag question asks exactly that: should the\n  concept be filed under the tag \"so that someone browsing that tag finds\n  it\"?\n- **The shelf list and the call number.** Dana's shelf list, a catalog in\n  shelf order, is librocat's finding aid (`finding_aid`, `index.md` per\n  directory). His call number is the concept id: it says where the concept\n  stands and tells it apart from its neighbors.\n- **Accessioning.** Dana calls the accession book \"a life history of every\n  book\". librocat keeps one: every write is a revision with who, when, and\n  which agent.\n- **Use is the test.** Dana: \"no useless lumber is more useless than unused\n  books.\" A hosted library counts retrievals (circulation), and\n  `weed_report` lists what nobody reads.\n- **Inventory.** Dana's periodic check of the library for what is missing or\n  out of place is `status` (link health) and `weed_report` (broken links,\n  orphans).\n- **Selection fits the users.** Dana's chapter on choosing books is the\n  `collection-policy` skill: what belongs in this library, and for whom."
+    },
+    {
+      "id": "library-science/improved-in-this-change",
+      "type": "Note",
+      "title": "Improved in this change",
+      "description": "1.",
+      "tags": ["library-science"],
+      "body": "1. **Scope notes** (ANSI/NISO Z39.19 \"SN\"). Dana says the list of headings\n   must be \"marked and annotated to fit your special needs\". A thesaurus\n   term now carries a `scope_note`: what the tag covers, and what belongs\n   elsewhere. Hosted cataloging reads it when it chooses tags.\n2. **Related terms** (Z39.19 \"RT\"). Cutter's syndetic catalog also refers\n   to \"illustrative and coördinate subjects\", the \"see also\" that is neither\n   broader nor narrower. A term now has `related`.\n3. **A tag filter includes narrower terms.** Cutter's references run from a\n   subject down to the subjects under it. `list` and `search` with a `tag`\n   now include every narrower term (at any depth), so asking for «auth»\n   finds what is filed under «oauth». Both engines, one function\n   (`tagFacet`).\n4. **Specific entry** (Cutter, rule 93: \"Enter a work under its\n   subject-heading, not under the heading of a class which includes that\n   subject\"). Hosted cataloging drops a broader tag when a narrower one\n   applies (`specificEntry`).\n5. **Check the shelf list before choosing a heading.** Dana: before placing\n   a book in a class, \"examine your shelf-list and see that the books\n   already there are of like nature with it\". Jev's tag questions now carry,\n   for each candidate tag, its scope note and titles already filed under\n   it.\n6. **Transcribe; bracket what you supply.** Cutter asks that the title be\n   \"copied ... exactly\" and that information the cataloger supplies be\n   marked (in brackets). librocat's description is preferably a sentence\n   transcribed from the concept, selected by Jev, not written. When a model\n   writes one instead (paid plans), Jev checks it against the concept and it\n   is kept only when supported. Either way, the concept records how, in\n   `cataloged` (`description: transcribed | generated`, `tags: selected |\n   generated`, `by`, `at`). The entry goes as soon as a writer changes the\n   field.\n7. **Libro's merge drafts are checked.** A merge draft is model-written, so\n   Jev checks it against its two sources and the review shelf shows the\n   result. A draft that invents is flagged before anyone approves it.\n8. **Review dates, and a loop that keeps the library current.** OKF's\n   `stale_after` marks when a concept should be checked again, and agents\n   can now set it on `ingest` and `update`. Every search hit says `stale:\n   true` once the date passes, `weed_report` lists it (MUSTIE's\n   \"misleading\", made mechanical), and Libro puts it on the review shelf.\n   **Still true** records who checked it (OKF `verified`) and moves the date\n   a cycle ahead; **Retire** deprecates it. Agents can verify too (`update`\n   with `verify: true`)."
+    },
+    {
+      "id": "library-science/how-the-cataloging-pipeline-avoids-hallucination",
+      "type": "Note",
+      "title": "How the cataloging pipeline avoids hallucination",
+      "description": "Automatic cataloging (hosted, `apps/web/convex/indexation.",
+      "tags": ["library-science"],
+      "body": "Automatic cataloging (hosted, `apps/web/convex/indexation.ts`) is built so a\ncatalog record cannot say something the concept does not:\n\n1. **Select before generating.** Code gathers candidates (the concept's own\n   sentences, the library's own tags). Jev, a small judgment model, picks\n   among them. Selection cannot invent a fact, and it is the cheapest stage\n   ($0.042 per million input tokens, output free).\n2. **Generate only what selection could not fill**, on paid plans only, and\n   tell the model the existing vocabulary.\n3. **Verify what was generated.** A second Jev request asks whether the\n   concept states everything the description says (kept at 0.8 or more) and\n   whether each tag is a subject of the concept (0.6 or more). What fails is\n   dropped and left for the writing agent. If Jev cannot be asked, nothing\n   generated is kept.\n4. **Never overwrite a writer**, and **record provenance** (`cataloged`), so\n   a reader can tell a transcribed description from a generated one.\n5. **A person decides on the shelf.** Libro proposes; nothing on the review\n   shelf changes until someone approves it, and every approval is a\n   revision."
+    },
+    {
+      "id": "library-science/libros-job-keep-the-library-current-and-say-what",
+      "type": "Note",
+      "title": "Libro's job: keep the library current, and say what it shows",
+      "description": "Libro, the library cat, is the librarian of a managed library, and its first duty is the one Dana gives the whole profession: a library is only as good as its use, and stale books are \"useless lumber\".",
+      "tags": ["library-science"],
+      "body": "Libro, the library cat, is the librarian of a managed library, and its first\nduty is the one Dana gives the whole profession: a library is only as good\nas its use, and stale books are \"useless lumber\". Libro's work, in the order\nit happens:\n\n1. **Catalog on arrival.** Every concept gets a record (description, tags),\n   selected from its own words and the library's vocabulary.\n2. **Keep it current.** Flag what may be outdated: past its review date,\n   never read, superseded but still marked stable, duplicated. Propose; a\n   person decides, and the decision is recorded.\n3. **Keep it consistent.** Fold synonyms, fix links on renames, draft merges\n   for duplicates, and have every draft checked against its sources.\n4. **Report.** Tell the team what the library shows: what arrived, what is\n   stale, what agents read most, and what they asked for and did not find.\n\nLibro cannot see the world change, so staleness needs signals. Today:\nreview dates (`stale_after`), circulation, supersession, duplicates, and,\nsince 2026-09-26, time-bound claims: after each review, Jev reads what was\nwritten or changed since it last looked, and for anything tied to a date,\na version, a price, or a person, Libro suggests a review date on the shelf\n(a month to a year out, as Jev judges). A person sets it or dismisses it.\nAnd, also since 2026-09-26, the code itself: a concept names the files it\ndescribes (OKF `sources`), and when a commit touches one, `changed` sets\nits review date to now and Libro puts it on the shelf with the file and\nthe commit. And, since 2026-09-27, the questions agents asked and found no\nanswer to (the ready-reference file, below). Each is embedded as a question\nto look up. The concepts nearest to it, written before it was last asked,\nare where its answer should have been. Jev judges whether each is about\nwhat was asked, and Libro puts the ones it is sure of on the shelf:\n**Mark stale** sets the review date to today, so the concept reads as\nstale until someone checks it, and **Dismiss** is for good."
+    },
+    {
+      "id": "library-science/the-ready-reference-file-and-libros-report-built",
+      "type": "Note",
+      "title": "The ready-reference file, and Libro's report (built 2026-09-25)",
+      "description": "Dana, ch.",
+      "tags": ["library-science"],
+      "body": "Dana, ch. XIII: \"Many questions come up again and again. Of these, and of\nthe references which answered them, notes should be kept.\" librocat keeps\nthat file (`convex/reference.ts`):\n\n- Every question an agent asks the library (a `search`) is filed, with what\n  it found and the concept the agent opened next: its answer.\n- Asked again, the question gets its answer first (`ready_reference`).\n- Rewordings of one question are grouped by embedding, and only when Jev\n  judges that they ask the same thing.\n- Jev judges whether the results really answered the question. The ones\n  that did not are the collection's gaps, the librarian's cue for what to\n  write down next.\n\nLibro reports what the file and the library show every Monday, on the\nOverview and by email (`convex/report.ts`): the library's annual report,\nweekly."
+    },
+    {
+      "id": "library-science/accession-numbers-are-never-reused-built-2026-09",
+      "type": "Note",
+      "title": "Accession numbers are never reused (built 2026-09-26)",
+      "description": "Dana, ch.",
+      "tags": ["library-science"],
+      "body": "Dana, ch. XIX: an accession number, once given, is never given again. A\ndeleted concept's id could otherwise be taken by a new concept with a\ndifferent meaning, and links or agents that remembered the old one would\nreach the new one. So a deleted id, and the old id of a renamed concept,\nare retired: a derived id never takes one again, reading one says what\nbecame of it (deleted on a date, or renamed to what), and an explicit id\nthat takes one says so. Local keeps them in the bundle's `log.md`, OKF's\nupdate log; hosted keeps them per workspace and exports the same file."
+    },
+    {
+      "id": "library-science/lists-of-additions-built-2026-09-27",
+      "type": "Note",
+      "title": "Lists of additions (built 2026-09-27)",
+      "description": "Dana, ch.",
+      "tags": ["library-science"],
+      "body": "Dana, ch. XXV: \"Print lists of additions.\" The root finding aid, the\nlibrary's front page (`index.md`), opens with what arrived in the last seven\ndays, newest first. Hosted, that comes from each concept's creation; Local,\nfrom Git (the commit that added the file, or now for one not committed yet).\nAgents read it with `finding_aid`, and the hosted export carries it."
+    },
+    {
+      "id": "library-science/embeddings-what-they-are-for-here-and-which-mode",
+      "type": "Note",
+      "title": "Embeddings: what they are for here, and which model (2026-09-25, updated 2026-09-26)",
+      "description": "**Where embeddings are used:** as a candidate generator, never a judge.",
+      "tags": ["library-science"],
+      "body": "**Where embeddings are used:** as a candidate generator, never a judge.\nJev judges everything they propose. Three jobs, all hosted:\n- grouping rewordings of a question in the ready-reference file, where\n  there is no vocabulary to control (2026-09-25);\n- Libro's duplicates by meaning (2026-09-27): concepts that say much the\n  same thing under different titles and tags. The mechanical pass (same\n  title) and the eve screen (shared tags, overlapping titles) can't see\n  these;\n- the concepts behind a question that found no answer (2026-09-27, above).\n\nSearch stays library science: a controlled vocabulary, cross-references,\nand review dates, with Jev judging relevance where it matters.\n\n**How concepts are embedded** (`convex/similar.ts`):\n- **The text:** a concept is a document: its title, description, and the\n  first 2,000 characters of its body. Qwen3 puts its instruction on the\n  query side only. A question looked up against concepts is embedded with\n  a retrieval instruction; a question compared with other questions, with\n  its own.\n- **Storage:** one 256-dimension vector per concept. It's embedded again\n  when the concept changes, and deleted with it.\n- **Runs:** at most 512 concepts a run. A big library is embedded over\n  several runs, and the first backfill costs well under a cent per\n  thousand concepts.\n- **\"Near\" means:** cosine 0.75 between two concepts, and 0.45 between a\n  question and a concept. Past that, Jev decides.\n- **Checking it:** `npx convex run embeddings:probe` makes a real call and\n  shows where a duplicate, a related concept, an unrelated one, and a\n  question's answer land.\n\n**The models, as the Vercel AI Gateway listed them on 2026-09-25:**\n\n| Model | Price per million tokens | Zero data retention | Trains on requests | Notes |\n| --- | --- | --- | --- | --- |\n| `alibaba/qwen3-embedding-8b` | $0.01 | yes, every provider (DeepInfra, Nebius) | no | **The model, since 2026-09-26**, pinned to DeepInfra (US). Open weights, 32k context, Matryoshka, top-tier |\n| `google/gemini-embedding-001` | $0.15 | yes, on Vertex AI (US) | no | The first default (2026-09-25). A US model, top-tier, at 15× the price |\n| `perplexity/pplx-embed-v1-0.6b` | $0.004 | no | no | The cheapest, US. Not chosen: no provider offers zero retention |\n| `google/gemini-embedding-2` | $0.20 | no (Google's Gemini API only) | no | Not chosen: its strength is images, audio, and video, which librocat does not have, at 20× Qwen's price. It is no-training, but not zero-retention, so Google may keep request logs for a time |\n| `amazon/titan-embed-text-v2`, `google/text-embedding-005` | $0.02–0.025 | yes | no | US, cheaper, weaker |\n\n**Why Qwen3-Embedding-8B on DeepInfra:** inference in the US, zero\nretention required on every request, no training, top-tier quality, and\nthe lowest price of any zero-retention model.\n- The lab is Alibaba, but only its open weights are used. DeepInfra runs\n  them in its own US data centers, and no request reaches Alibaba.\n- The gateway request is pinned (`only: [\"deepinfra\"]`). That keeps it off\n  Nebius, which also runs in the EU.\n- If DeepInfra is down, questions group by their words until it's back.\n- Merges are Jev's call: the embedding only proposes the nearest earlier\n  questions.\n\n**What would widen their use:** search ranking, and only after the\nretrieval harness (`packages/core/tests/retrieval.test.ts`) and real\nlibraries show it helps. Local librocat stays offline, with no embeddings."
+    },
+    {
+      "id": "local/run-it",
+      "type": "Note",
+      "title": "Run it",
+      "description": "```bash npx librocat start # http://127.",
+      "tags": ["local"],
+      "body": "```bash\nnpx librocat start            # http://127.0.0.1:4747/mcp, over ./okf\nLIBROCAT_BUNDLE=~/notes/okf npx librocat start --port 4800\n```\n\n`start` serves Streamable HTTP on loopback only, so any number of agents on\nthis machine share one library. Point each at the URL, for example\n`claude mcp add --transport http librocat-local http://127.0.0.1:4747/mcp`,\nor `{ \"url\": \"http://127.0.0.1:4747/mcp\" }` in any MCP config.\n\nAn agent that spawns its servers over stdio instead runs the same library\nitself:\n\n```json\n{\n  \"mcpServers\": {\n    \"librocat\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"librocat\", \"mcp\"],\n      \"env\": { \"LIBROCAT_BUNDLE\": \"./okf\" }\n    }\n  }\n}\n```\n\nThe Agent Skills are the same for a local and a hosted library:\n`npx skills add librocat/librocat`."
+    },
+    {
+      "id": "local/local-and-hosted-together",
+      "type": "Note",
+      "title": "Local and hosted, together",
+      "description": "The CLI moves a library between the two, the way `supabase db push/pull` moves a schema: ```bash librocat login # sign in to the hosted library (browser, OAuth) librocat push [dir] # this folder's OKF files -> the hosted library librocat pu",
+      "tags": ["local"],
+      "body": "The CLI moves a library between the two, the way `supabase db push/pull`\nmoves a schema:\n\n```bash\nlibrocat login          # sign in to the hosted library (browser, OAuth)\nlibrocat push [dir]     # this folder's OKF files -> the hosted library\nlibrocat pull [dir]     # the hosted library -> OKF files here, e.g. to commit\nlibrocat whoami\nlibrocat logout\n```\n\nAfter a commit, `librocat changed` puts the concepts whose `sources` name a\nfile it touched up for review (their review date becomes now). With\n`--remote` it does the same in the hosted library, and `--since ORIG_HEAD`\ncovers a pull or merge. As a hook: `echo 'npx librocat changed' >>\n.git/hooks/post-commit`.\n\n`librocat login` offers to push a local library into a brand-new, empty\nhosted one, and never touches a library that already holds concepts.\n`librocat mcp --remote` serves the hosted library on stdio, for an agent that\ncannot connect to a remote MCP server itself; its `ingest_repo` still reads\nthis machine's disk."
+    },
+    {
+      "id": "local/workflow",
+      "type": "Note",
+      "title": "Workflow",
+      "description": "- Commit the OKF files to your own Git repo (GitHub, GitLab, or anywhere).",
+      "tags": ["local"],
+      "body": "- Commit the OKF files to your own Git repo (GitHub, GitLab, or anywhere).\n  The repo is the source of truth, not the index and not librocat.\n- The MCP tools are the only read/write interface. See\n  [mcp-tools.md](./mcp-tools.md).\n- **Your agent is the indexer.** When it ingests a concept it writes the\n  title, description, and tags itself. `ingest_repo` writes a mechanical\n  description, and your agent improves it with `update`. (The hosted\n  library catalogs what the writer left blank, and Libro keeps it in order.)\n- The index rebuilds from the files at every launch. After you edit files\n  outside the MCP (an editor, a `git pull`), ask your agent to run `reindex`.\n- `status` reports `stale: true` when the files on disk and the index disagree.\n- `history` is the file's Git log (keep the bundle inside a Git repo);\n  `weed_report` lists what to review; `thesaurus` is the tag vocabulary (one\n  concept file, `thesaurus.md`); `finding_aid` with `write: true` writes an\n  `index.md` shelf list into each directory.\n- There is nothing to persist except the files."
+    },
+    {
+      "id": "local/self-hosting-the-full-service",
+      "type": "Note",
+      "title": "Self-hosting the full service",
+      "description": "`librocat start` is the library, not the hosted service.",
+      "tags": ["local"],
+      "body": "`librocat start` is the library, not the hosted service. The hosted service\n(dashboard, sign-in, teams, Libro) is this repository's `apps/web` on Convex\nand Vercel; running all of it yourself is documented in DEVELOPERS.md. Set\n`LIBROCAT_SELF_HOST=1` on both the Convex deployment and the Next.js app:\nno plans, no quotas, and no Billing page."
+    },
+    {
+      "id": "mcp-tools/notes",
+      "type": "Note",
+      "title": "Notes",
+      "description": "- **Shelves.",
+      "tags": ["mcp-tools"],
+      "body": "- **Shelves.** `search` and `list` take `shelf` (the leading directory of\n  concept ids, `\"acme\"` for `acme/...`): one library, many shelves. A project\n  reads its own shelf first and the whole library second. Split a library\n  only when access must differ (docs/okf.md §Shelves).\n- **Several libraries (hosted).** The MCP URL picks one: `/mcp` is your\n  default library, and `/mcp?library=<slug>` another you belong to (the\n  dashboard shows each library's URL; the CLI takes `--library`). `status`\n  says which library this is (`library`) and lists the others\n  (`libraries`). See docs/cloud.md §Several libraries.\n\n- **Author entry** (Cutter's object D). `search` and `list` take `author`:\n  only concepts that writer wrote. Hosted, that is everyone who wrote a\n  revision (the cataloger aside): a member by email (or `human:<email>`),\n  `me`, an agent by its name (`Claude Code`), or `process:libro`.\n  `get_concept` lists them as `authors`, people by email. Local reads the\n  Git log instead: a commit author's name or email, or `me` (the repo's\n  configured user); uncommitted writes have no author yet, and a bundle\n  outside Git says so.\n- **Writes** (`ingest`, `update`, `rename`, `delete`, `ingest_repo`) edit OKF\n  files (Local) or Convex rows (Cloud) and update the index in the same call.\n  In Cloud every write also appends a revision.\n- **`history`** is Git history in Local (the bundle must live inside a Git\n  repository; `revision` is a commit hash) and the revisions table in Cloud\n  (`revision` is the sequence number). Both return the same shape:\n  `revisions[]` newest first, or `snapshot` with `frontmatter` and `body`.\n- **`delete`** removes one concept. Links from other concepts to it become\n  broken links (`status` counts them) until you fix or remove them.\n- **Ids are never reused by default** (a library's accession numbers,\n  Dana, ch. XIX). A deleted id, and the old id of a renamed concept, are\n  retired: `ingest` never derives one again (it bumps to `-2`), and reading\n  one says what became of it (`concept not found: x (deleted on 2026-09-20\n  (\"Title\"))`, or `(renamed to y on …)`). An explicit `id` may still take a\n  retired id; the result says so in `reused`. Local keeps them in the\n  bundle's `log.md` (OKF's update log); hosted keeps them per workspace and\n  writes the same `log.md` into the export.\n- **Supersession.** `update` with `superseded_by` retires a concept in favor\n  of another (a \"see\" reference): status becomes `deprecated` unless given,\n  `get_concept` and `search` return `superseded_by`, and `search` sinks\n  deprecated hits below live ones unless you filter on `status`.\n- **Thesaurus.** The controlled vocabulary lives in one concept (`thesaurus`,\n  type `Thesaurus`, `terms` in frontmatter), shaped like a library thesaurus\n  (ANSI/NISO Z39.19): broader (BT), narrower (NT), related (RT, \"see also\"),\n  and use-for (UF) terms, plus a scope note (SN) per tag. Writes map\n  `use_for` synonyms onto the preferred tag; `search` expands a preferred\n  tag with its narrower terms and a synonym with its preferred tag; a `tag`\n  filter on `search` or `list` includes every narrower term below the tag.\n  Hosted cataloging reads scope notes when it picks tags, and files under\n  the most specific tag (a broader tag goes when a narrower one applies).\n- **The ready-reference file (hosted).** Every `search` is filed as a\n  question, with what it found and the concept the agent opens next (its\n  answer). Asked again, the question gets that answer as its first hit,\n  marked `ready_reference: true`. What found no answer shows on the\n  dashboard's reference desk and in Libro's weekly report. Questions are\n  kept 90 days; one that looks like it carries a secret is never kept.\n- **Review dates.** `stale_after` (OKF's lifecycle field) is when a concept\n  should be checked again: an ISO date such as `2026-12-31`, set on anything\n  time-bound (a plan, a price, a version, an owner). Every summary in\n  `search`, `list`, and `get_concept` ca"
+    },
+    {
+      "id": "okf/a-concept",
+      "type": "Note",
+      "title": "A concept",
+      "description": "```markdown --- type: Decision # the only required field title: Use Orama for local search description: One actionable sentence.",
+      "tags": ["okf"],
+      "body": "```markdown\n---\ntype: Decision            # the only required field\ntitle: Use Orama for local search\ndescription: One actionable sentence.\ntags: [search, local]\nstatus: stable            # draft | stable | deprecated (default: stable)\nsupersededBy: decisions/use-orama-v2   # librocat extension: a \"see\" reference, set by `update superseded_by`\n---\n\n# Body\nFront-load the answer. Link related concepts: [index layer](/architecture/index-layer.md).\n```"
+    },
+    {
+      "id": "okf/ids-and-paths",
+      "type": "Note",
+      "title": "Ids and paths",
+      "description": "The concept id is the file's bundle path without `.",
+      "tags": ["okf"],
+      "body": "The concept id is the file's bundle path without `.md`. librocat appends `.md` when\nwriting, so ids that contain dots round-trip (a Python file `code/index.py` is\nstored at `code/index.py.md` and keeps the id `code/index.py`)."
+    },
+    {
+      "id": "okf/shelves-one-library-many-projects",
+      "type": "Note",
+      "title": "Shelves: one library, many projects",
+      "description": "The leading directory of an id is its **shelf** (`acme/auth-flow` sits on the `acme` shelf).",
+      "tags": ["okf"],
+      "body": "The leading directory of an id is its **shelf** (`acme/auth-flow` sits on the\n`acme` shelf). A library stays one connected whole (one thesaurus, one graph,\none weeding report), and projects are shelves in it. `search` and `list`\ntake `shelf: \"acme\"` to scope a read to one project, and an agent working in\nthat project searches its shelf first and the whole library second. Every\nshelf gets its own finding aid (`index.md`). Do not split a library into\nseveral to get per-project views; that is what a shelf is for. Split only\nwhen access must differ (a client under NDA, personal vs employer): that is\na second library (hosted: its own `?library=` URL) or a second repo (Local)."
+    },
+    {
+      "id": "okf/links-become-the-graph",
+      "type": "Note",
+      "title": "Links become the graph",
+      "description": "Only Markdown links to `.",
+      "tags": ["okf"],
+      "body": "Only Markdown links to `.md` targets become graph edges:\n\n- `/path/from/bundle.md` — bundle-relative\n- `./sibling.md`, `../up.md` — relative to the concept\n\nExternal URLs and anchors are ignored. `neighbors` and `graph` see exactly the\nlinks you write, so link generously."
+    },
+    {
+      "id": "okf/reserved-files",
+      "type": "Note",
+      "title": "Reserved files",
+      "description": "`index.",
+      "tags": ["okf"],
+      "body": "`index.md` and `log.md` are reserved (directory listing and update log). They are\nnot indexed as concepts. librocat writes the bundle-root `log.md` when a concept\nis deleted or renamed, under date headings, newest first:\n\n```markdown"
+    },
+    {
+      "id": "okf/2026-09-26",
+      "type": "Note",
+      "title": "2026-09-26",
+      "description": "* **Deletion**: `notes/old` — Old title * **Rename**: `notes/a` → `notes/b` ``` It reads the log back, so a retired id is never handed to a new concept by default.",
+      "tags": ["okf"],
+      "body": "* **Deletion**: `notes/old` — Old title\n* **Rename**: `notes/a` → `notes/b`\n```\n\nIt reads the log back, so a retired id is never handed to a new concept by\ndefault. Anything else in the log is kept."
+    },
+    {
+      "id": "okf/dublin-core-roughly",
+      "type": "Note",
+      "title": "Dublin Core, roughly",
+      "description": "OKF frontmatter maps nearly one-to-one onto [Dublin Core](https://www.",
+      "tags": ["okf"],
+      "body": "OKF frontmatter maps nearly one-to-one onto [Dublin Core](https://www.dublincore.org/specifications/dublin-core/dces/),\nthe fifteen-element library metadata standard: `title` → dc:title,\n`description` → dc:description, `tags` → dc:subject, `type` → dc:type, links →\ndc:relation. The format is a hand-authorable catalog record, not an invented\nschema. (The one element OKF lacks is dc:date — Git history holds it in Local; Cloud stamps `created_at`/`updated_at` and keeps a revision per write.)"
+    },
+    {
+      "id": "okf/leniency",
+      "type": "Note",
+      "title": "Leniency",
+      "description": "Parsing is lenient per the spec: unknown frontmatter keys are preserved, unknown types are treated as generic concepts, and a file that fails to parse is skipped rather than aborting the load.",
+      "tags": ["okf"],
+      "body": "Parsing is lenient per the spec: unknown frontmatter keys are preserved, unknown\ntypes are treated as generic concepts, and a file that fails to parse is skipped\nrather than aborting the load."
+    },
+    {
+      "id": "toollist/runtime-and-package-management",
+      "type": "Note",
+      "title": "Runtime and package management",
+      "description": "| Tool | Version | Job | Where it is configured | Daily command | | --- | --- | --- | --- | --- | | Node.",
+      "tags": ["toollist"],
+      "body": "| Tool | Version | Job | Where it is configured | Daily command |\n| --- | --- | --- | --- | --- |\n| Node.js | 24 LTS | The only runtime: scripts, tests, Next.js, Convex CLI, the published `librocat` package | `engines.node >= 20` in `packages/npm/package.json`, Node 24 in CI | `pnpm run plugin` (`node scripts/check-plugin.ts`) |\n| pnpm | 12.4 | Install, workspaces, lockfile. Strict `node_modules`: a package imports only what it declares | `packageManager` in `package.json`, `pnpm-workspace.yaml` (workspace globs, `allowBuilds`, `minimumReleaseAgeExclude`) | `pnpm install`, `pnpm run <task>` |\n| npm | 11 (ships with Node) | Publishes `librocat`. Installs `agents/libro` on its own, outside the workspace | `agents/libro/package-lock.json` | `npm publish` (from `packages/npm`, after `pnpm run build`) |"
+    },
+    {
+      "id": "toollist/build-test-lint",
+      "type": "Note",
+      "title": "Build, test, lint",
+      "description": "| Tool | Version | Job | Where it is configured | Daily command | | --- | --- | --- | --- | --- | | Turborepo | 2.",
+      "tags": ["toollist"],
+      "body": "| Tool | Version | Job | Where it is configured | Daily command |\n| --- | --- | --- | --- | --- |\n| Turborepo | 2.10 | Runs `build`, `test`, `typecheck`, `dev` across the workspace in dependency order, with a cache | `turbo.json` | `pnpm run build`, `pnpm test` |\n| TypeScript | 7.0 | Type checking only (`tsc --noEmit`). No emit: Node strips types, esbuild bundles | `tsconfig.base.json` and one `tsconfig.json` per package | `pnpm run typecheck` |\n| Biome | 2.5 | Lint and format, one tool instead of eslint + prettier | `biome.json` | `pnpm run lint`, `pnpm run format` |\n| vitest | 5.0 | Tests, Jest-style `expect`, one worker per file | None. Default globs find `tests/*.test.ts` | `pnpm test` |\n| esbuild | 0.28 | Bundles `packages/mcp/src/main.ts` into the zero-dependency `dist/main.js`, the `librocat` CLI's bin (`packages/npm/server/main.js`) | The `build` script in `packages/mcp/package.json` | `pnpm run build` |"
+    },
+    {
+      "id": "toollist/product-libraries",
+      "type": "Note",
+      "title": "Product libraries",
+      "description": "| Tool | Version | Job | Used in | | --- | --- | --- | --- | | MCP TypeScript SDK (`@modelcontextprotocol/server`, `/client`) | 2.",
+      "tags": ["toollist"],
+      "body": "| Tool | Version | Job | Used in |\n| --- | --- | --- | --- |\n| MCP TypeScript SDK (`@modelcontextprotocol/server`, `/client`) | 2.0 | The stdio server and the e2e client | `packages/mcp` |\n| zod | 4.6 | Tool input schemas | `packages/mcp` |\n| Orama | 3.1 | In-memory search index, pure TypeScript | `packages/core` |\n| yaml | 2.9 | OKF frontmatter | `packages/core` |\n| Next.js | 16.3 | The site, the dashboard, the remote MCP route | `apps/web` |\n| React | 19.3 | UI | `apps/web` |\n| shadcn/ui + Tailwind CSS | 4.21 / 4.3 | Components and styling | `apps/web` |\n| Convex | 1.45 | Database, functions, scheduled indexation, crons | `apps/web/convex` |\n| Better Auth (`better-auth`, `@convex-dev/better-auth`, `@better-auth/oauth-provider`) | 1.6.33 / 0.12.5 / 1.6.33 | Dashboard sign-in (email + password, emailed codes) and the OAuth 2.1 authorization server agents sign in through (dynamic client registration, PKCE, RS256 JWTs). Pinned: the Convex component supports Better Auth below 1.7; `patches/` fixes its null matching for refresh tokens | `apps/web/convex/auth.ts`, `convex/betterAuth/` |\n| Resend | API | Sign-in and verification codes | `apps/web/convex/email.ts` |\n| mcp-handler | 2.1 | The remote MCP endpoint on top of the SDK | `apps/web/src/app/mcp` |\n| Stripe SDK | 22.6 | Checkout, the index-credit meter, webhooks | `apps/web/convex/stripe.ts` |\n| eve | 0.54 | Libro, the review agent | `agents/libro` (npm, Node 24) |\n| Vercel AI Gateway | `/v1/evaluate`, `/v1/chat/completions` | Every model call: Jev (`typesafe-ai/jev`, typed judgments, $0.042 per million input tokens) catalogs and screens first; Gemini 3.8 Flash (`google/gemini-3.8-flash`) writes only what Jev could not fill, on paid plans, and runs Libro | `apps/web/convex/jev.ts`, `indexation.ts`, `libro.ts`, `agents/libro` |"
+    },
+    {
+      "id": "toollist/automation",
+      "type": "Note",
+      "title": "Automation",
+      "description": "| Tool | Job | Where | | --- | --- | --- | | GitHub Actions | CI on every push and pull request: install, lint, typecheck, build, test, plugin (the manifest check), plus a `libro` job and a `secrets` job | `.",
+      "tags": ["toollist"],
+      "body": "| Tool | Job | Where |\n| --- | --- | --- |\n| GitHub Actions | CI on every push and pull request: install, lint, typecheck, build, test, plugin (the manifest check), plus a `libro` job and a `secrets` job | `.github/workflows/ci.yml` |\n| TruffleHog (`trufflesecurity/trufflehog`) | Scans every push, and a pull request's whole history, for committed credentials; a verified or unverifiable find fails CI | the `secrets` job in `ci.yml` |\n| Deploy alert | A failed Production deploy (Vercel's deployment status) opens a GitHub issue, which emails the watchers; the next successful deploy closes it | `.github/workflows/deploy-alert.yml` |\n| `pnpm/setup@v2`, `actions/checkout@v7`, `actions/setup-node@v7` | The actions CI uses. `pnpm/setup` reads the pnpm version from `packageManager` | same file |\n| Dependabot | Monthly grouped updates for pnpm (`npm` ecosystem), `agents/libro`, and the actions | `.github/dependabot.yml` |\n| Make | Short aliases for the pnpm commands | `Makefile` |\n| GitHub | `librocat/librocat` (public: this monorepo, the source of truth) and `librocat/status` (the status page) | `gh` |\n| Vercel | Hosts `apps/web` as the project `librocat` (team `<your-team>`, root directory `apps/web`, Node 24); production builds run `convex deploy --cmd 'pnpm run build'` | `apps/web/vercel.json`, `vercel link` in `apps/web` |\n| Convex (Vercel marketplace) | The project `librocat`: one dev deployment per developer, prod `peaceful-panther-855`; deploy keys synced to the Vercel project | `pnpm exec convex dev` in `apps/web` |"
+    },
+    {
+      "id": "toollist/what-is-not-in-the-stack",
+      "type": "Note",
+      "title": "What is not in the stack",
+      "description": "- bun: removed on 2026-08-20.",
+      "tags": ["toollist"],
+      "body": "- bun: removed on 2026-08-20. `bunx librocat` still works for users, the\n  same as `npx`, `pnpm dlx`, and `yarn dlx`; it is not a developer tool here.\n- eslint, prettier: Biome does both jobs.\n- jest, tsup, rollup, webpack: vitest and esbuild cover the two jobs this\n  repo has.\n- A Node bundler or SEA: the package ships as a plain npm bundle.\n- `@types/node` above the 24.x line: held there on purpose to match the Node\n  24 runtime pinned in CI, Vercel, and `packages/mcp`'s `engines`. Bumping the\n  types alone would let code typecheck against APIs the runtime doesn't have."
+    },
+    {
+      "id": "toollist/the-same-shape-elsewhere",
+      "type": "Note",
+      "title": "The same shape elsewhere",
+      "description": "| | librocat | vercel/vercel | supabase/supabase | | --- | --- | --- | --- | | Runtime | Node 24 | Node | Node ≥ 22 | | Packages | pnpm 12 | pnpm 10 | pnpm 11 | | Tasks | Turborepo | Turborepo | Turborepo | | Lint / format | Biome | Biome +",
+      "tags": ["toollist"],
+      "body": "| | librocat | vercel/vercel | supabase/supabase |\n| --- | --- | --- | --- |\n| Runtime | Node 24 | Node | Node ≥ 22 |\n| Packages | pnpm 12 | pnpm 10 | pnpm 11 |\n| Tasks | Turborepo | Turborepo | Turborepo |\n| Lint / format | Biome | Biome + prettier | eslint + prettier |\n| Tests | vitest | vitest | (per package) |\n| Bundle | esbuild | esbuild | (per package) |\n\nThe public repository is this monorepo itself: the same toolchain, every\npackage, and the hosted service's code (Next.js, Convex, Stripe, eve)."
+    },
+    {
+      "id": "toollist/standards-and-references",
+      "type": "Note",
+      "title": "Standards and references",
+      "description": "The specs librocat implements and the references it follows.",
+      "tags": ["toollist"],
+      "body": "The specs librocat implements and the references it follows. When one of\nthese changes, the code follows it, not the other way around.\n\n| Reference | What it governs in librocat |\n| --- | --- |\n| [Agent Plugins](https://agent-plugins.org/) | The plugin layout (`plugin.json`, `mcp.json`, `skills/`). Remote servers are `\"type\": \"streamable-http\"` with a `url`; OAuth is the host's job, and headers must never carry secrets |\n| [Agent Skills](https://agentskills.io/home) | The `SKILL.md` format of the skills in the plugin, and the `npx skills add librocat/librocat` path for agents without Agent Plugin support |\n| [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) | The server and client SDK (v2) behind every MCP surface: the remote `/mcp`, the local server, the CLI bridge, the e2e clients |\n| [mcp-handler](https://github.com/vercel-labs/mcp-handler) | The remote MCP route on Vercel: stateless Streamable HTTP, `withMcpAuth` (401 + RFC 9728 challenge), the protected-resource metadata |\n| [Open Knowledge Format, the announcement](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing) | Why OKF exists: a shared Markdown library that agents read and update, curated like code |\n| [OKF SPEC](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) | The storage and export format: frontmatter (`type` required), bundles, `index.md` / `log.md`, links, provenance (`generated`, `verified`, `sources`, `stale_after`) |\n| [LLM Wiki (Karpathy)](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) | The pattern librocat productizes: an LLM-maintained wiki with ingest, query, and lint. In librocat: `ingest`, `search`, `weed_report`, and Libro |"
+    },
+    {
+      "id": "toollist/where-librocat-lives",
+      "type": "Note",
+      "title": "Where librocat lives",
+      "description": "| Place | What it is | | --- | --- | | [github.",
+      "tags": ["toollist"],
+      "body": "| Place | What it is |\n| --- | --- |\n| [github.com/librocat/librocat](https://github.com/librocat/librocat) | The public repository (Apache-2.0) |\n| [github.com/librocat/cloud](https://github.com/librocat/cloud) | Private: this monorepo today |\n| [github.com/librocat/status](https://github.com/librocat/status) | The status page (Upptime), served at `status.librocat.dev` |\n| [npmjs.com/package/librocat](https://www.npmjs.com/package/librocat) | The npm package `librocat` |"
+    },
+    {
+      "id": "brand/the-idea-libro-in-a-badge-drawn-in-one-line-the-",
+      "type": "Note",
+      "title": "The idea: Libro in a badge, drawn in one line (the Yarn direction)",
+      "description": "librocat = *libro* (book) + *cat*, and the cat has a name: **Libro, the library cat**, librocat's librarian.",
+      "tags": ["brand"],
+      "body": "librocat = *libro* (book) + *cat*, and the cat has a name: **Libro, the\nlibrary cat**, librocat's librarian. The mark follows the **Yarn logo**: a\nsolid **rounded square** (the same corner feel as the site's cards), and\ninside it the cat drawn as a **single monoline outline** in\none light color, one continuous stroke, hand-drawn but simple. Two\ndifferences from Yarn: Yarn's cat has its back to us; **Libro faces the\nviewer** (three-quarter front), sitting up and attentive, the way a\nlibrarian faces the desk. And **Libro sits on a closed book**, drawn in the\nsame line. No hat. Because Libro faces\nus, the head gets a small, friendly face drawn in the same line as\neverything else: **two happy closed eyes** (short arcs curving upward, the\nway a cat's eyes go when it purrs) behind **small round glasses**, a **tiny\nnose**, a **small w-shaped mouth** under it, and **three short whiskers on\neach cheek**. Nothing filled: a filled dot\ninside an outlined head is what makes a monoline face look off. Libro is a\n**kitten**: baby proportions (big head, big ears, small body, big paws),\ncute and friendly the way Yarn's cat is, and the glasses make the kitten a\nlibrarian: smart, sitting up straight, on the book. Kitten plus glasses is\nthe whole character in one glance.\n\nWhy this works: the badge scales from favicon to hero without changing\n(the full drawing above 32 px, the head crop below, both the same line),\nit is warm and friendly without becoming a full cartoon (no fills, no\ncolor inside the face, one line weight), and one continuous stroke is a\nsignature nobody else has (Yarn's is a beanie; ours is the book). It also\ngives Libro a face the copy can point at (\"Libro pulled 4 concepts for\nreview\")."
+    },
+    {
+      "id": "brand/the-favicon-libros-head-as-a-silhouette-from-the",
+      "type": "Note",
+      "title": "The favicon: Libro's head as a silhouette, from the same drawing (decided 2026-08-25)",
+      "description": "A full cat-on-book in a 16 px tile is about 10 px of cat: it muddies no matter how it is rendered (a solid silhouette of the *whole cat* was tried and dropped).",
+      "tags": ["brand"],
+      "body": "A full cat-on-book in a 16 px tile is about 10 px of cat: it muddies no\nmatter how it is rendered (a solid silhouette of the *whole cat* was tried\nand dropped). The favicon is therefore **the head only**, the standard\nmascot-favicon move: the head is where all the cute lives, and head +\nears + glasses fills the whole tile with shapes big enough to survive\n16 px. And at 16 px even the thickened line head is a smudge (1 px lines\non a green field; tested in a Chrome tab strip on 2026-08-25), so the\nhead mark is the head **as a plain silhouette, the GitHub move**: the head\noutline filled, whiskers, glasses, and eyes dropped (the glasses are\ndropped too: two cut-out discs muddied the 16 px tile, and the Octocat\nproves a plain silhouette is enough), in **green on a paper rounded\nsquare** with the badge's corner radius, filling the whole tile, no\nsticker border. `scripts/trace-logo.py` derives it from the traced head\n(`public/logo-head.svg`); it is not a separate generation and needs no\nprompt of its own. It is one file everywhere below the hero: the 28 px\nlockups (header, footer, auth pages, dashboard, where the line head was\ngray noise) and the browser tab (`apps/web/src/app/icon.svg` is a copy;\n`favicon.ico` and `apple-icon.png` are rasterized from it), so the tab\nicon and the header mark are the same image. On the site's paper\nbackground the square melts away and the green head sits next to the\nwordmark, the way the Octocat sits in GitHub's header; on a dark tab strip\nthe paper square pops.\n\nHow the line mark becomes the head mark:\n\n- **Crop, do not redraw.** Take the traced line mark and keep the head:\n  the head outline, both ears with the notch between them, the glasses\n  rings with the bridge, the happy closed eyes inside them, and the\n  whiskers. Delete the body, paws, tail, book, temple, nose, and mouth. Same geometry,\n  never a second generation.\n- **Enlarge and fill.** Scale the head to about 0.8 of the tile's side\n  and fill the outline in green, so the shape holds at 16 and 28 px.\n  Center it optically (a touch below center, balanced under the ears).\n- **Plain.** The glasses, the eyes, and the whiskers belong to the line\n  mark (the hero). The head mark is the outline only: ears, cheeks, the\n  tuft. What makes it Libro at that size is the shape and the green.\n- **Same shape, no sticker.** The head mark's ground is a paper rounded\n  square with the badge's corner radius, filling the tile with no sticker\n  border, so it rhymes with the hero badge and the site's cards without\n  wasting tile.\n\nCoherence check, in one glance: the favicon must look like a zoom into\nthe hero mark's head, the same head at the same angle. If the head needs redrawing to read at 16 px, fix the traced\nline mark's head and let both crops inherit it."
+    },
+    {
+      "id": "brand/fit-with-the-site",
+      "type": "Note",
+      "title": "Fit with the site",
+      "description": "The mark must look like it was drawn by the same hand as the website (`apps/web`): paper background, ink text, one green accent, IBM Plex Mono wordmark, hairline borders, cards with a soft radius, a faint ruled \"catalog card\" behind the her",
+      "tags": ["brand"],
+      "body": "The mark must look like it was drawn by the same hand as the website\n(`apps/web`): paper background, ink text, one green accent, IBM Plex Mono\nwordmark, hairline borders, cards with a soft radius, a faint ruled\n\"catalog card\" behind the hero. Rules that keep the mark in that world:\n\n- **Colors only from the site tokens.** Green `#1F744F` badge, paper\n  `#F9FAFC` line, or ink `#141B26` where the badge is ink. The only other\n  mark on the page is the line mark's hairline sticker edge, ink at 12 %\n  opacity, on both crops. No blush, no highlight,\n  no gradient. On the dark theme the badge stays green and the line stays\n  paper.\n- **Line weight like the site's rules.** The site's borders are 1 px\n  hairlines; the line mark's stroke is about 1/24 of the side (about 2.5 px\n  at the 56 px small-screen hero, 10 px at the 240 px hero). Round caps, the\n  way the site's rounded corners feel. At 32 px and below the head mark\n  takes over, with its stroke thickened to about 1/12 of the side.\n- **Flat, calm, no effects.** No shadow, no bevel. The only edge is the\n  sticker's paper border with its hairline, which is what lets the badge sit\n  on the ruled catalog card like a sticker on a notebook page. The rounded\n  square is the same shape family as every card on the site.\n- **Cute, but in the site's register.** The site is plain and composed\n  (Hormozi copy, book-face headings). Libro's cuteness comes from\n  proportion and the happy eyes, not from stickers: no sparkles, no hearts,\n  no speech bubbles, no paw prints around the badge.\n- **Sits with the wordmark.** In the header the badge is 20 px next to\n  `librocat` in Plex Mono, so at that size it must read as \"cat in a\n  rounded square\" and nothing more. Use the head mark there, as in the\n  favicon; the full line mark starts above 32 px."
+    },
+    {
+      "id": "brand/geometry",
+      "type": "Note",
+      "title": "Geometry",
+      "description": "- **Badge, as a sticker**: a solid green **rounded square** with a corner radius of about 20 % of the side (the proportion of the site's `rounded-xl` cards; app-icon shape, not a circle), and around it a paper border about 4 % of the side w",
+      "tags": ["brand"],
+      "body": "- **Badge, as a sticker**: a solid green **rounded square** with a corner\n  radius of about 20 % of the side (the proportion of the site's `rounded-xl`\n  cards; app-icon shape, not a circle), and around it a paper border about\n  4 % of the side wide, cut like a die-cut sticker (following the rounded\n  square), with a hairline edge in ink at about 12 % opacity so the paper\n  border shows on the site's paper background. Whole sticker fills the\n  canvas with about 4 % margin. This is what makes the mark sit on the\n  hero's ruled catalog card like a sticker on a notebook page. The sticker\n  border and hairline are part of the badge in both crops: the head mark\n  (20 px lockups, favicon, app icon) keeps them too, collapsing at tiny\n  sizes.\n- **Line**: a **green cat, never a white cat**. The paper line only draws\n  Libro's outline and the badge's green shows through inside it: nothing\n  is ever filled in the line mark. The head mark is the one exception: a\n  green silhouette on paper (see The favicon), because at 16 and 28 px a\n  line cannot be seen. Everything inside the badge is one stroke weight, about 1/24 of\n  the badge's side, round caps and joins, in the light color. No fills\n  inside the badge except the badge itself and the head mark's silhouette. The cat should read as one\n  continuous line where possible (back, head, ear, ear, head, chest, front\n  paw, book, tail), the way Yarn's does; the face and the whiskers are\n  the short separate strokes, same weight.\n- **Pose and proportions (kitten)**: Libro sits upright with the **body\n  in three-quarter view turned to the viewer's left** (chest and front\n  paws angled toward the left edge of the badge, haunch on the right) and\n  the **head turned to the viewer**, smiling straight at them, the way a\n  kitten turns its head when called. Both ears show; the chest line and\n  both front paws are visible. The body direction is not optional: in the\n  hero the mark sits right of the headline, so Libro's body leans toward\n  the text while the face greets the reader. Body never turned right,\n  never dead front; face never in profile. Baby proportions: the\n  head is about half the whole cat's height, round, with chubby cheeks\n  and big ears (each about 0.2 of the side, tips softly rounded, set\n  wide); the body is tiny and round under it, on short stubby legs; paws\n  oversized for the body; the tail short. Chibi, never adult. Whole kitten\n  about 0.6 of the side tall, centered slightly right; the short tail is\n  held straight up behind the haunch, the way a happy cat carries it, with\n  the tip curling forward in a soft hook (a question mark), never lying on\n  the book or wrapped around the base. Friendly and upright: back\n  straight, head level.\n- **The book**: under Libro, a closed hardcover in a light three-quarter\n  view from above and from the left (the chosen generation, 2026-08-23),\n  about 0.55 of the side wide and 0.15 tall with its thickness, drawn in\n  the same line: the top cover as a flat parallelogram with rounded\n  corners, the fore-edge facing front-left as a band with three parallel\n  page lines, the rounded spine on the right with two lines along it. It\n  must read as a book on its own, not as a plinth. It sits flat; Libro's\n  weight rests on the cover; the tail rises from the right side of the\n  body, above the spine side of the book, and never touches or crosses\n  the book.\n- **Face**: small round glasses, two rings each about 0.1 of the side\n  across (the head is about 0.3 of the side across, so the two rings plus\n  a one-stroke bridge sit inside it with a margin), joined by a short bridge, drawn in the same stroke (no temples\n  needed at three quarters, or one short temple to the near ear); inside\n  each ring a happy closed eye, a short arc curving upward (like ^ ^, a\n  purring cat); one tiny nose (a small rounded v) under the bridge; a small\n  w-shaped mouth just below it; **three short whiskers on each cheek**,\n  straight, fanning out slightly from beside the mouth,"
+    },
+    {
+      "id": "brand/palette-from-the-site-theme-apps-web-src-app-glo",
+      "type": "Note",
+      "title": "Palette (from the site theme, apps/web/src/app/globals.css)",
+      "description": "| Role | Hex | Use | |------|-----|-----| | Ink | `#141B26` | the ink-badge variant; the hairline edge (at 12 % opacity); the wordmark's `libro` | | Library green | `#1F744F` | the default badge, in both themes; the wordmark's `cat` | | Pap",
+      "tags": ["brand"],
+      "body": "| Role | Hex | Use |\n|------|-----|-----|\n| Ink | `#141B26` | the ink-badge variant; the hairline edge (at 12 % opacity); the wordmark's `libro` |\n| Library green | `#1F744F` | the default badge, in both themes; the wordmark's `cat` |\n| Paper | `#F9FAFC` | the line in both marks; the sticker border; the paper-badge variant |\n| Ink (dark bg) | `#0A1018` | the dark theme's page; the mark does not change on it |\n| Green (on dark) | `#66C093` | the dark theme's accent (the wordmark's `cat` there); not used in the mark |\n\nDeliver three variants: **green badge with a paper line** (default; the\n`cat` in the wordmark is this green), **ink badge with a paper line** (for\nplaces where green would fight the content), and **paper badge with an ink\nline** (for print and monochrome). The mark is the same in both site\nthemes: green badge, paper line. Two colors per variant, plus the hairline\nsticker edge on both crops."
+    },
+    {
+      "id": "brand/lockups",
+      "type": "Note",
+      "title": "Lockups",
+      "description": "- **Horizontal**: mark, then a gap of 0.",
+      "tags": ["brand"],
+      "body": "- **Horizontal**: mark, then a gap of 0.4 × the mark's width (8 px at 20 px), then the wordmark\n  `librocat` in a monospace face (IBM Plex Mono in the site), lowercase,\n  `libro` in ink and `cat` in green. The wordmark's x-height centers on the\n  badge's center.\n- **Stacked**: mark above the wordmark, centered, gap of 0.35 × mark height.\n- **Hero**: the mark alone, large, in the right two fifths of the landing\n  page's ruled catalog card, with the headline, lead, install command, and\n  buttons in the left three fifths (text left so it is read first, the mark\n  as the reward at the end of the line). No wordmark under it (the wordmark\n  is in the header). Sized to the visual weight of the headline block, about\n  240 px. On small screens the split collapses: the mark on top at 56 px,\n  text below. This is the one place the mark stands by itself, so the\n  drawing must read as a cat on a book with no help from the name.\n- **Favicon / app icon**: the head-mark badge itself is the icon, in the\n  same sticker format as the hero (green rounded square, sticker border,\n  hairline), no wordmark, no extra padding. The app icon at 192 and\n  512 px is the same head mark, so the icon is one image at every size."
+    },
+    {
+      "id": "brand/where-it-goes-shipped-2026-08-25",
+      "type": "Note",
+      "title": "Where it goes (shipped 2026-08-25)",
+      "description": "`apps/web/src/components/brand.",
+      "tags": ["brand"],
+      "body": "`apps/web/src/components/brand.tsx` exports `LogoMark` and `Brand`. `LogoMark`\nrenders `public/logo-head.svg` by default and `public/logo.svg` with the `line`\nprop (the hero). Both come from the 2026-08-25 generations through\n`scripts/trace-logo.py` (see From PNG to SVG); the head mark's stroke is\nthickened to 1/16 of the side there:\n\n| Slot | Size | Where |\n|------|------|-------|\n| Hero, alone | 320 px (`size-80`) in the right column on `lg`, 384 px (`xl:size-96`) from `xl`; 80 px (`size-20`) on top on small screens | `apps/web/src/app/page.tsx` |\n| Header lockup | 28 px (`size-7`) + 10 px gap + wordmark at `text-2xl`, head mark | `SiteHeader` (landing and standalone pages) |\n| Footer lockup | 28 px, head mark | `SiteFooter` |\n| Auth pages | 28 px in the centered `Brand` at `text-3xl`, head mark | `/sign-in`, `/sign-up` |\n| Dashboard header | 28 px, head mark | `apps/web/src/app/dashboard/layout.tsx` |\n| Favicon / app icon | head mark (the same file) | `apps/web/src/app/favicon.ico` (16, 32, 48), `icon.svg` (any size, modern browsers), `apple-icon.png` (180) |\n| OG image | 1200 × 630, line mark + \"The open-source knowledge base for AI agents\" + the plugin install command, on paper | `apps/web/src/app/opengraph-image.tsx` (rendered at build) |"
+    },
+    {
+      "id": "brand/prompts-for-the-image-model-grok-imagine-square-",
+      "type": "Note",
+      "title": "Prompts for the image model (Grok Imagine, square 1:1)",
+      "description": "Order: generate the line mark first (2048 × 2048), pick the winner, then run the favicon prompt on that image as an edit, so the favicon is the same face in the same sticker.",
+      "tags": ["brand"],
+      "body": "Order: generate the line mark first (2048 × 2048), pick the winner, then\nrun the favicon prompt on that image as an edit, so the favicon is the\nsame face in the same sticker. The shipped favicon.ico is still built\nfrom the traced SVG (From PNG to SVG, step 4); the favicon generation\npreviews the look and serves as the tracing reference for the head. Grok\nImagine has no negative-prompt field, so the exclusions are inside the\nprompts. Judge generations on the drawing, not the exact tint: the hex\nvalues are set when tracing.\n\nWhiskers, in both renderings: three short straight strokes on each\ncheek, fanning out from beside the mouth, the same weight and round caps\nas the line. They are the one departure from the single continuous\nstroke, so keep them short and few (never long, never curved, never\nmore than three a side) so they read at 20 px; at 16 px they go with the\neye arcs."
+    },
+    {
+      "id": "brand/1-line-mark-hero-og-image",
+      "type": "Note",
+      "title": "1. Line mark (hero, OG image)",
+      "description": "> Minimal logo for a developer tool, in the style of the Yarn package > manager logo, presented as a die-cut sticker, flat vector illustration, > drawn entirely as one thin off-white outline on dark green: a green > cat, not a white cat, ne",
+      "tags": ["brand"],
+      "body": "> Minimal logo for a developer tool, in the style of the Yarn package\n> manager logo, presented as a die-cut sticker, flat vector illustration,\n> drawn entirely as one thin off-white outline on dark green: a green\n> cat, not a white cat, never filled, the green background showing\n> through inside every shape, with exactly three short whiskers on each\n> cheek, six whiskers in total, the left and right cheeks mirror images.\n> The character is Libro, a very cute baby kitten, a few weeks old, never\n> an adult cat: chibi proportions with a huge round head about as big as\n> its whole body, chubby round cheeks, big ears with softly rounded tips\n> and a clear notch between them, a tiny round body, short stubby legs,\n> oversized paws, a short tail held straight up with a happy curl at the\n> tip, everything small, round, and soft,\n> adorable the way Yarn's kitten is, with a content purring expression.\n>\n> Pose, strictly three-quarter body with the face to the viewer: Libro\n> sits upright on a closed book with its body turned about 30 degrees to\n> the viewer's left (chest and front paws angled toward the left side of\n> the image, the haunch on the right), while the head turns back toward\n> the camera so the face looks straight at the viewer and smiles at them,\n> the way a kitten turns its head when you call it. Both ears show, back\n> straight, head level, both front paws planted side by side on the book\n> cover, the short tail raised straight up on the right, behind the\n> haunch, its tip curling forward like a question mark, the way a happy\n> cat holds its tail, clear of the book. Small round glasses with one\n> thin temple to the right ear. Body not straight-on, body not in\n> profile, body not turned to the right; face not in profile, not looking\n> away, not looking up or down.\n>\n> Canvas and badge, exact: square canvas. A solid dark green rounded\n> square (#1F744F) with corners rounded at 20 percent of its side, like\n> an app icon, surrounded by an off-white (#F9FAFC) die-cut sticker\n> border about 4 percent of the side wide that follows the rounded\n> square, with a very thin light gray edge line around the border; the\n> whole sticker fills the canvas with about 4 percent margin of plain\n> off-white background. Nothing else on the canvas.\n>\n> Layout inside the green square, exact, all sizes as fractions of the\n> square's side: the kitten-and-book group is horizontally centered and\n> occupies the middle of the badge, shifted down about 3 percent so it\n> sits balanced under the ears. The kitten is about 60 percent tall, from\n> about 10 percent from the top to about 70 percent. Its round head is\n> about 30 percent wide, half the kitten's height; each ear about 20\n> percent tall; the glasses rings each about 10 percent across with the\n> short bridge between them; the tiny body, stubby legs, and oversized\n> paws fill the remaining 30 percent of the kitten's height. The book's\n> top cover edge sits at about 70 percent from the top; the book is about\n> 55 percent wide and 15 percent tall including its thickness, ending at\n> about 85 percent from the top.\n>\n> Line rendering, exact: everything inside the green square is drawn as a\n> single continuous thin off-white (#F9FAFC) line, monoline, one uniform\n> stroke weight of about 4 percent of the side, round caps and round\n> joins, no fill anywhere inside any shape. The face is drawn in the same\n> line: two thin glasses rings joined by a short bridge, inside each ring\n> a happy closed eye as a short arc curving upward (like ^ ^, a purring\n> kitten), one tiny rounded-v nose under the bridge, one small w-shaped\n> mouth just below it, and exactly three short straight whiskers fanning\n> out from each cheek, three on the left and three on the right, the two\n> sides symmetric, the same thin line. The cuteness comes from the\n> proportions and the happy eyes, nothing else.\n>\n> The book, drawn with the precision of a technical illustration: a thick\n> closed hardcover lying flat, seen in a light three-quarte"
+    },
+    {
+      "id": "brand/2-favicon-the-head-mark-run-as-an-edit-on-prompt",
+      "type": "Note",
+      "title": "2. Favicon (the head mark), run as an edit on prompt 1's winner",
+      "description": "> Crop this logo to only the kitten's head, keeping the exact same > sticker format and the exact same outline style (a green cat, not a > white cat: only the off-white line, never filled, the green showing > through inside the head, whiske",
+      "tags": ["brand"],
+      "body": "> Crop this logo to only the kitten's head, keeping the exact same\n> sticker format and the exact same outline style (a green cat, not a\n> white cat: only the off-white line, never filled, the green showing\n> through inside the head, whiskers kept): the same solid dark green rounded square (#1F744F)\n> with soft app-icon corners, the same off-white (#F9FAFC) die-cut\n> sticker border around it with its very thin light gray edge line, the\n> sticker filling the square canvas with a small margin. Inside it keep\n> only the kitten's head from this logo, drawn in the same single\n> off-white monoline style: the round head, the two big ears with the\n> notch between them, the round glasses (two rings joined by a short\n> bridge), the happy closed eyes as small upward arcs inside them, and\n> exactly three short whiskers on each cheek, three left and three right,\n> mirrored, six in total.\n> The head is large and centered, filling about 70 percent of the green\n> square. Remove the body, the paws, the tail, the book, the glasses\n> temple, the nose, the mouth, and everything else. Make the line about\n> twice as thick as the original so it reads at 16 pixels, same round\n> caps, no fill anywhere. Exactly two colors plus the thin gray sticker\n> edge: green #1F744F and off-white #F9FAFC. No nose, no\n> mouth, no filled shapes, no text, no gradient, no shadow, no 3D, not a\n> circle."
+    },
+    {
+      "id": "brand/variants",
+      "type": "Note",
+      "title": "Variants",
+      "description": "Swap the badge to ink `#141B26` with the same paper line, or invert to a paper `#F9FAFC` badge with an ink `#141B26` line.",
+      "tags": ["brand"],
+      "body": "Swap the badge to ink `#141B26` with the same paper line, or invert to a\npaper `#F9FAFC` badge with an ink `#141B26` line. Same prompts otherwise."
+    },
+    {
+      "id": "brand/from-png-to-svg",
+      "type": "Note",
+      "title": "From PNG to SVG",
+      "description": "`python3 scripts/trace-logo.",
+      "tags": ["brand"],
+      "body": "`python3 scripts/trace-logo.py <dir with hero.jpg and favicon.jpg>` does all\nof this in one go (page dropped, sticker and badge redrawn as exact rounded\nrects in the site's hex, the paper line traced with potrace, the head stroke\nthe head silhouette filled, favicon set rasterized). The manual route, for reference:\n\n1. Pick the cleanest generation; crop to the square with margin.\n2. Trace: `potrace` (via Inkscape → Path → Trace Bitmap, single scan,\n   threshold ~0.5) or `vtracer` (mode: polygon off, spline on). Better for a\n   monoline: retrace the line by hand in Inkscape or Figma as one stroked\n   path (round caps), then Stroke to Path, so the weight stays exact.\n3. Simplify the path (Inkscape: Path → Simplify at 0.002) until the SVG is\n   one `<path>` under about 2 KB.\n4. Make the head mark from the traced line mark, not from a separate\n   generation: duplicate the traced drawing, delete everything but the\n   head (head outline, ears, glasses rings and bridge, eye arcs,\n   whiskers), scale\n   the head to about 0.7 of the badge's side, thicken the stroke to about\n   1/12 of the side (increase the stroke width before Stroke to Path),\n   and center it on the same sticker badge as the hero (green rounded\n   square, sticker border, hairline). Keep a copy with the\n   eye arcs and whiskers (32 px and up) and one without (16 px) only if\n   they muddy;\n   otherwise one file.\n5. Export `logo.svg` (the line-mark badge, above 32 px) and `logo-head.svg`\n   (the head-mark badge, 32 px and below) into `apps/web/public/`. No lockup\n   file: the wordmark is code (`brand.tsx`), and the OG image composes the\n   line mark and the wordmark in code.\n6. Wire it in: `LogoMark` in `apps/web/src/components/brand.tsx` is an\n   `<img>` of `logo-head.svg`, or `logo.svg` with the `line` prop (the hero's\n   `size-60` and `size-14`). The badge carries its own two colors, so it\n   does not need `currentColor`; keep the badge green in both themes and\n   let the line stay paper. The favicon set in `apps/web/src/app/` comes from\n   `logo-head.svg`: `favicon.ico` (16, 32, 48), `icon.svg` (a copy), and\n   `apple-icon.png` (180, flattened on paper: iOS paints transparency\n   black), all three from `logo-head.svg` (`icon.svg` is a copy). `opengraph-image.tsx` composes the OG card from `logo.svg`."
+    },
+    {
+      "id": "self-hosting/what-runs",
+      "type": "Note",
+      "title": "What runs",
+      "description": "| Service | What it is | Port | | --- | --- | --- | | `convex` | The Convex backend: database, functions, HTTP actions | 3210, 3211 | | `deploy` | One-shot: pushes librocat's functions and settings, then exits | none | | `web` | The site, t",
+      "tags": ["self-hosting"],
+      "body": "| Service | What it is | Port |\n| --- | --- | --- |\n| `convex` | The Convex backend: database, functions, HTTP actions | 3210, 3211 |\n| `deploy` | One-shot: pushes librocat's functions and settings, then exits | none |\n| `web` | The site, the dashboard, and the remote MCP at `/mcp` | 3000 |\n| `dashboard` | Optional: Convex's own dashboard (data, logs, settings) | 6791 |\n\nThe ports are published on this machine only (`127.0.0.1`)."
+    },
+    {
+      "id": "self-hosting/start",
+      "type": "Note",
+      "title": "Start",
+      "description": "You need Docker with Compose v2, or Podman with `podman compose`.",
+      "tags": ["self-hosting"],
+      "body": "You need Docker with Compose v2, or Podman with `podman compose`. You also\nneed git, openssl, and about 2 GB of memory.\n\n```bash\ngit clone https://github.com/librocat/librocat.git\ncd librocat/self-host\n./setup.sh          # with Podman: COMPOSE=\"podman compose\" ./setup.sh\n```\n\n`setup.sh` does the following, and is safe to run again:\n1. writes the secrets to `self-host/.env`;\n2. starts Convex and takes its admin key;\n3. builds the image;\n4. deploys the functions;\n5. starts the site.\n\nThe first build takes a few minutes. Keep `.env`: it's the key to your data.\n\nThen:\n\n1. **Open http://localhost:3000 and create an account.** No email service is\n   set up yet, so the verification code goes to the function log. Run\n   `./logs.sh --history 100` and look for \"verification code\".\n2. **Connect an agent** to `http://localhost:3000/mcp`. For example:\n\n   ```bash\n   claude mcp add --transport http librocat http://localhost:3000/mcp\n   ```\n\n   On its first call, the agent opens your browser to sign in and approve\n   it. Use `localhost`, not `127.0.0.1`: the address is part of every token."
+    },
+    {
+      "id": "self-hosting/settings",
+      "type": "Note",
+      "title": "Settings",
+      "description": "Set these in `self-host/.",
+      "tags": ["self-hosting"],
+      "body": "Set these in `self-host/.env`, then apply them with `docker compose up -d\n--build`.\n\n| Variable | What it does |\n| --- | --- |\n| `AUTH_RESEND_KEY` | Email sign-up and password codes through [Resend](https://resend.com). Unset: codes go to the log. |\n| `AI_GATEWAY_API_KEY` | Automatic cataloging by Jev, and Libro's screens after each review: review dates, duplicates by meaning, and the concepts behind unanswered questions (Jev and Qwen3 embeddings), all through the Vercel AI Gateway. Unset: no model is called. |\n| `LIBROCAT_PORT` | The site's port on this machine (default 3000). |\n| `LIBROCAT_SITE_URL` | The address people and agents use (default `http://localhost:$LIBROCAT_PORT`). |\n| `CONVEX_CLOUD_ORIGIN`, `CONVEX_SITE_ORIGIN` | Where browsers reach Convex (default `http://127.0.0.1:3210` and `:3211`). |\n| `LIBROCAT_BIND` | The interface the ports are published on (default `127.0.0.1`). |"
+    },
+    {
+      "id": "self-hosting/on-a-server-with-a-domain",
+      "type": "Note",
+      "title": "On a server, with a domain",
+      "description": "Put a reverse proxy with TLS in front, such as Caddy or nginx on the same host.",
+      "tags": ["self-hosting"],
+      "body": "Put a reverse proxy with TLS in front, such as Caddy or nginx on the same\nhost. It needs three names:\n- the site, to port 3000;\n- Convex, to port 3210;\n- Convex's HTTP actions, to port 3211.\n\nFor example, in `.env`:\n\n```bash\nLIBROCAT_SITE_URL=https://kb.example.com\nCONVEX_CLOUD_ORIGIN=https://convex.kb.example.com\nCONVEX_SITE_ORIGIN=https://auth.kb.example.com\n```\n\nThen run `docker compose up -d --build`; the addresses are built into the\nsite.\n\nThe site's server reaches Convex at those same public addresses, so the\nserver must be able to resolve them.\n\nAnyone who can reach the site can create an account and a library of their\nown. People join a shared library through a Team invite link. If you don't\nwant open sign-up, keep the site on a private network, or put your proxy's\nown login in front of it."
+    },
+    {
+      "id": "self-hosting/run-it",
+      "type": "Note",
+      "title": "Run it",
+      "description": "- **Logs:** - `.",
+      "tags": ["self-hosting"],
+      "body": "- **Logs:**\n  - `./logs.sh` for the Convex functions (Ctrl+C to stop);\n  - `docker compose logs web` for the site.\n- **Convex's dashboard:** run `docker compose --profile admin up -d`, then\n  open http://localhost:6791 and paste `CONVEX_ADMIN_KEY` from `.env`.\n- **Backups:** everything lives in the `convex-data` volume. To take a\n  snapshot:\n\n  ```bash\n  docker compose run --rm --no-deps -v \"$PWD/backups:/backups\" deploy \\\n    sh -c 'cd apps/web && node_modules/.bin/convex export --path /backups/librocat.zip'\n  ```\n\n  `convex import` restores one. The dashboard's Export also gives each\n  library as plain OKF files, which work with `npx librocat start`.\n- **Upgrade:** `git pull && docker compose up -d --build`. The deploy step\n  pushes the new functions.\n- **Stop:**\n  - `docker compose down` keeps the data;\n  - `docker compose down -v` deletes it."
+    },
+    {
+      "id": "self-hosting/how-it-differs-from-librocat-dev",
+      "type": "Note",
+      "title": "How it differs from librocat.dev",
+      "description": "- There is no billing and there are no quotas.",
+      "tags": ["self-hosting"],
+      "body": "- There is no billing and there are no quotas.\n- Libro the agent (an eve deployment) is not included. The review shelf\n  still runs Libro's weekly mechanical review. With `AI_GATEWAY_API_KEY`\n  set, it also gets Jev's review-date suggestions, duplicates found by\n  meaning, and the concepts behind unanswered questions.\n- Convex runs on SQLite in the volume. For Postgres, S3, or several\n  machines, see [Convex's self-hosting guide](https://github.com/get-convex/convex-backend/tree/main/self-hosted)\n  and add its settings to the `convex` service."
+    },
+    {
+      "id": "readme/hosted-recommended",
+      "type": "Note",
+      "title": "Hosted (recommended)",
+      "description": "Install the Agent Plugin: the connection to your library and four Agent Skills that teach an agent to catalog well, into every agent that supports [Agent Plugins](https://agent-plugins.",
+      "tags": ["readme"],
+      "body": "Install the Agent Plugin: the connection to your library and four Agent\nSkills that teach an agent to catalog well, into every agent that supports\n[Agent Plugins](https://agent-plugins.org) (Claude Code, Cursor, Codex,\nVS Code, and others):\n\n```bash\nnpx plugins add librocat/librocat\n```\n\nThe first time an agent calls librocat, your browser opens to sign in and\napprove it (OAuth 2.1). No API key to copy.\n\nWithout Agent Plugins, add the server and the [Agent Skills](https://agentskills.io)\nseparately:\n\n```bash\nclaude mcp add --transport http librocat https://librocat.dev/mcp   # Claude Code\ncodex mcp add librocat --url https://librocat.dev/mcp               # Codex\nnpx skills add librocat/librocat\n```\n\nAny other MCP client: `{ \"mcpServers\": { \"librocat\": { \"url\": \"https://librocat.dev/mcp\" } } }`.\n\nThat URL reaches your default library. Several libraries, one per team or\nclient, each have their own: `https://librocat.dev/mcp?library=<slug>`,\nshown on the dashboard. Pin a repo to one in its `.mcp.json`."
+    },
+    {
+      "id": "readme/local",
+      "type": "Note",
+      "title": "Local",
+      "description": "```bash npx librocat start ``` The same tools at `http://127.",
+      "tags": ["readme"],
+      "body": "```bash\nnpx librocat start\n```\n\nThe same tools at `http://127.0.0.1:4747/mcp`, over OKF files in `./okf`\nthat you commit to Git. No account, offline, and your agent is the\ncataloger. `librocat login`, `push`, and `pull` move a library between your\nmachine and the hosted service. See [docs/local.md](./docs/local.md)."
+    },
+    {
+      "id": "readme/self-hosted",
+      "type": "Note",
+      "title": "Self-hosted",
+      "description": "```bash cd self-host && .",
+      "tags": ["readme"],
+      "body": "```bash\ncd self-host && ./setup.sh\n```\n\nThe whole hosted service (the site, the dashboard, the remote MCP with\nsign-in for agents, Libro's review shelf) on your own machine or server,\non a self-hosted Convex, with no plans or billing. See\n[SELF_HOSTING.md](./SELF_HOSTING.md)."
+    },
+    {
+      "id": "readme/what-is-in-this-repository",
+      "type": "Note",
+      "title": "What is in this repository",
+      "description": "```text apps/web librocat.",
+      "tags": ["readme"],
+      "body": "```text\napps/web          librocat.dev: the landing page, the dashboard, the remote MCP\n                  route (src/app/mcp), and the OAuth discovery documents\napps/web/convex   the hosted backend on Convex: concepts, links, revisions, search,\n                  Better Auth (sign-in + the OAuth server for /mcp), teams,\n                  cataloging, Libro's review shelf, Stripe billing\nagents/libro      Libro, the library cat: the eve agent that reviews a library\npackages/core     the engine: OKF read/write, the format and library-science rules\n                  shared by both halves, the in-memory Orama index\npackages/mcp      the librocat CLI and local MCP server; src/tools.ts is the one\n                  tool table the hosted route serves too\npackages/npm      the npm package `librocat` (the CLI's bin) and server.json\nplugin/           the Agent Plugin: the remote MCP entry and plugin/skills/\nself-host/        Docker Compose for self-hosting (SELF_HOSTING.md)\ndocs/             architecture, OKF, the MCP tools, local, hosted\n```"
+    },
+    {
+      "id": "readme/develop",
+      "type": "Note",
+      "title": "Develop",
+      "description": "```bash pnpm install pnpm run build # turbo: the CLI bundle + the Next.",
+      "tags": ["readme"],
+      "body": "```bash\npnpm install\npnpm run build       # turbo: the CLI bundle + the Next.js build\npnpm run test        # turbo: core suite, the CLI end to end (+ opt-in hosted e2e)\npnpm run typecheck\npnpm run lint        # biome\npnpm run plugin      # check the Agent Plugin's manifests\n```\n\nThe hosted service runs against a local Convex with no account; see\n[DEVELOPERS.md](./DEVELOPERS.md) and [docs/cloud.md](./docs/cloud.md)."
+    },
+    {
+      "id": "readme/more",
+      "type": "Note",
+      "title": "More",
+      "description": "- The MCP tools: [docs/mcp-tools.",
+      "tags": ["readme"],
+      "body": "- The MCP tools: [docs/mcp-tools.md](./docs/mcp-tools.md)\n- How it fits together: [docs/architecture.md](./docs/architecture.md)\n- Security: [SECURITY.md](./SECURITY.md) and https://librocat.dev/security\n- Status: https://status.librocat.dev · Changelog: [GitHub Releases](https://github.com/librocat/librocat/releases)\n\nApache-2.0. © 2026 Laughing Hermit, Inc. librocat is a Laughing Hermit, Inc.\nproduct; https://librocat.dev is its only domain."
+    },
+    {
+      "id": "libro-agent/what-it-does",
+      "type": "Note",
+      "title": "What it does",
+      "description": "The Convex deployment starts a session here after each weekly review (or \"Ask Libro now\"): \"Review workspace `<id>`\".",
+      "tags": ["libro-agent"],
+      "body": "The Convex deployment starts a session here after each weekly review (or\n\"Ask Libro now\"): \"Review workspace `<id>`\". Libro reads the review shelf,\nthe weeding report, the thesaurus, and the concepts that matter, then files\nproposals on the same review shelf a human sees on the dashboard: `merge`\n(with a drafted merged concept), `supersede`, `deprecate`, `synonym`. Libro\nproposes, the user disposes. Nothing changes until someone clicks Approve.\n\nTools (`agent/tools/`): `status`, `review_shelf`, `weed_report`, `thesaurus`,\n`search`, `list`, `get_concept`, `neighbors`, `propose`. Reads and the propose\ncall go to two service routes on the Convex deployment (`/libro/read`,\n`/libro/propose`, see `apps/web/convex/http.ts`) with a shared bearer secret."
+    },
+    {
+      "id": "libro-agent/run-locally",
+      "type": "Note",
+      "title": "Run locally",
+      "description": "eve needs Node 24 (the system node since 2026-08-20; the rest of the monorepo runs on Node 24 and pnpm).",
+      "tags": ["libro-agent"],
+      "body": "eve needs Node 24 (the system node since 2026-08-20; the rest of the\nmonorepo runs on Node 24 and pnpm). This package is installed with npm on its\nown, outside the pnpm workspace.\n\n```bash\ncd agents/libro\nnpm install\nexport AI_GATEWAY_API_KEY=...                       # Vercel AI Gateway\nexport LIBROCAT_CONVEX_SITE_URL=http://127.0.0.1:3211   # the local deployment's .convex.site URL\nexport LIBRO_SECRET=dev-secret                      # same value on the Convex deployment\nnpm run dev                                          # eve dev on :2000\n```\n\nOn the Convex side (`apps/web`): `pnpm exec convex env set LIBRO_SECRET dev-secret`\nand `pnpm exec convex env set LIBRO_URL http://127.0.0.1:2000`. Then \"Ask Libro\nnow\" on the Overview summons Libro after the mechanical pass."
+    },
+    {
+      "id": "libro-agent/deploy",
+      "type": "Note",
+      "title": "Deploy",
+      "description": "`eve deploy` (its own Vercel project, next to the site).",
+      "tags": ["libro-agent"],
+      "body": "`eve deploy` (its own Vercel project, next to the site). Set\n`AI_GATEWAY_API_KEY`, `LIBROCAT_CONVEX_SITE_URL` (prod `.convex.site`), and\n`LIBRO_SECRET` on it; set `LIBRO_URL` and `LIBRO_SECRET` on prod Convex.\ndocs/cloud.md §Libro."
+    },
+    {
+      "id": "npm/use-the-hosted-library-recommended",
+      "type": "Note",
+      "title": "Use the hosted library (recommended)",
+      "description": "With [Agent Plugins](https://agent-plugins.",
+      "tags": ["npm"],
+      "body": "With [Agent Plugins](https://agent-plugins.org) (Claude Code, Cursor, Codex,\nVS Code, and others), one command adds the connection and the four Agent\nSkills that teach an agent to catalog well:\n\n```bash\nnpx plugins add librocat/librocat\n```\n\nWithout Agent Plugins, add the server and the skills separately:\n\n```bash\nclaude mcp add --transport http librocat https://librocat.dev/mcp   # Claude Code\ncodex mcp add librocat --url https://librocat.dev/mcp               # Codex\nnpx skills add librocat/librocat                                    # the skills\n```\n\nAny other MCP client: `{ \"mcpServers\": { \"librocat\": { \"url\": \"https://librocat.dev/mcp\" } } }`.\nNo API key: the agent opens your browser to sign in and approve it."
+    },
+    {
+      "id": "npm/run-it-locally",
+      "type": "Note",
+      "title": "Run it locally",
+      "description": "```bash npx librocat start ``` An MCP server at `http://127.",
+      "tags": ["npm"],
+      "body": "```bash\nnpx librocat start\n```\n\nAn MCP server at `http://127.0.0.1:4747/mcp` over the OKF files in\n`./okf` (or `LIBROCAT_BUNDLE`): commit them to Git; they are the source of\ntruth. No account, no network, loopback only. The same 17 tools, and your\nagent is the cataloger. For an agent that spawns its servers over stdio:\n`{ \"command\": \"npx\", \"args\": [\"-y\", \"librocat\", \"mcp\"] }`."
+    },
+    {
+      "id": "npm/move-a-library-between-the-two",
+      "type": "Note",
+      "title": "Move a library between the two",
+      "description": "```bash librocat login # sign in to the hosted library in the browser librocat push [dir] # local OKF bundle -> hosted library librocat pull [dir] # hosted library -> local OKF bundle (e.",
+      "tags": ["npm"],
+      "body": "```bash\nlibrocat login          # sign in to the hosted library in the browser\nlibrocat push [dir]     # local OKF bundle -> hosted library\nlibrocat pull [dir]     # hosted library -> local OKF bundle (e.g. to commit it)\nlibrocat whoami         # which library this machine is signed in to\nlibrocat logout\n```"
+    },
+    {
+      "id": "npm/keep-it-current-as-the-code-changes",
+      "type": "Note",
+      "title": "Keep it current as the code changes",
+      "description": "Give a concept about code its `sources` (repository paths such as `src/auth/login.",
+      "tags": ["npm"],
+      "body": "Give a concept about code its `sources` (repository paths such as\n`src/auth/login.ts`, a directory ending in `/`, or GitHub links). Then, after\neach commit, the concepts that describe the files it touched come up for\nreview:\n\n```bash\nlibrocat changed                 # the last commit's files, local library\nlibrocat changed --remote        # ... in the hosted library\nlibrocat changed --since ORIG_HEAD   # after a pull or merge\necho 'npx librocat changed' >> .git/hooks/post-commit   # every commit\n```\n\n`librocat mcp --remote` serves the hosted library on stdio, for an agent that\ncannot connect to a remote MCP server itself.\n\n- Repository: https://github.com/librocat/librocat\n- Site: https://librocat.dev\n- Security: the local server opens no network connection and sends no\n  telemetry; the CLI's sign-in is stored owner-only in\n  `~/.librocat/credentials.json`. See\n  [SECURITY.md](https://github.com/librocat/librocat/blob/main/SECURITY.md).\n\nApache-2.0. © 2026 Laughing Hermit, Inc."
+    },
+    {
+      "id": "changelog/libros-screens-by-meaning-on-every-plan-after-ev",
+      "type": "Note",
+      "title": "Libro's screens by meaning, on every plan, after every review",
+      "description": "Libro's screens by meaning, on every plan, after every review.",
+      "tags": ["changelog"],
+      "body": "Libro's screens by meaning, on every plan, after every review. Hosted,\n  with an AI Gateway key.\n  - Each concept is embedded (Qwen3-Embedding-8B on DeepInfra, zero\n    retention), one vector per concept, deleted with it.\n  - Duplicates by meaning: concepts that say the same thing under\n    different titles and tags go on the shelf when Jev confirms them.\n  - Unanswered questions as a staleness signal: the concepts a question\n    that found no answer is about go on the shelf (\"No answer\"). Mark\n    stale sets the review date to today, so every read says the concept is\n    stale until someone checks it.\n  - `embeddings:probe` also checks concepts, and a question against its\n    answer."
+    },
+    {
+      "id": "changelog/lists-of-additions-danas-print-lists-of-addition",
+      "type": "Note",
+      "title": "Lists of additions (Dana's \"print lists of additions\"): the root finding aid ope",
+      "description": "Lists of additions (Dana's \"print lists of additions\"): the root finding aid opens with what arrived in the last seven days, newest first.",
+      "tags": ["changelog"],
+      "body": "Lists of additions (Dana's \"print lists of additions\"): the root finding\n  aid opens with what arrived in the last seven days, newest first. Hosted\n  from each concept's creation, Local from Git."
+    },
+    {
+      "id": "changelog/several-libraries-per-account-like-supabase-proj",
+      "type": "Note",
+      "title": "Several libraries per account, like Supabase projects: your own, and the teams y",
+      "description": "Several libraries per account, like Supabase projects: your own, and the teams you join.",
+      "tags": ["changelog"],
+      "body": "Several libraries per account, like Supabase projects: your own, and the\n  teams you join.\n  - Each library has its own members, plan, quota, and address for agents.\n    `https://librocat.dev/mcp` reaches your default library, and\n    `?library=<slug>` reaches another. One sign-in covers them all, and a\n    library you don't belong to answers \"no library\".\n  - The dashboard has a library switcher, New library, and Library\n    settings (rename, delete). Its Connect page shows each library's URL.\n  - A person can own two Free libraries, and the pricing says so. A paid\n    plan is per library.\n  - The CLI takes `--library <slug>` (or `LIBROCAT_LIBRARY`), and one\n    `librocat login` covers every library.\n  - `status` names the library and lists the others."
+    },
+    {
+      "id": "changelog/self-hosting-self-host-runs-the-whole-hosted-ser",
+      "type": "Note",
+      "title": "Self-hosting: self-host/ runs the whole hosted service with Docker Compose (or",
+      "description": "Self-hosting: `self-host/` runs the whole hosted service with Docker Compose (or Podman).",
+      "tags": ["changelog"],
+      "body": "Self-hosting: `self-host/` runs the whole hosted service with Docker\n  Compose (or Podman). That's the site, the dashboard, the remote MCP with\n  OAuth sign-in for agents, and Libro's review shelf, on a self-hosted\n  Convex, with no plans or billing.\n  - `./setup.sh` makes the secrets, starts Convex, deploys the functions,\n    and starts the site.\n  - `./logs.sh` shows the function log, where sign-up codes go without an\n    email service.\n  - See `SELF_HOSTING.md`."
+    },
+    {
+      "id": "changelog/concepts-about-code-come-up-for-review-when-the-",
+      "type": "Note",
+      "title": "Concepts about code come up for review when the code changes",
+      "description": "Concepts about code come up for review when the code changes.",
+      "tags": ["changelog"],
+      "body": "Concepts about code come up for review when the code changes.\n  - `ingest` and `update` take `sources`: the files a concept describes, as\n    repository paths (a directory ends in `/`) or GitHub/GitLab links,\n    stored as OKF `sources`. `ingest_repo` records each file as the\n    concept's OKF `resource`, from the repository root.\n  - A new tool, `changed`, takes the paths a commit or pull request\n    touched. Every live concept that names one gets a review date of now,\n    so it reads `stale: true`. Hosted, it also goes on Libro's review shelf\n    with the file and commit.\n  - `librocat changed` runs it from a Git hook: the last commit's files,\n    or `--since <ref>`, locally or `--remote`.\n  - 17 tools now (15 over the hosted MCP directly)."
+    },
+    {
+      "id": "changelog/hosted-libro-suggests-review-dates",
+      "type": "Note",
+      "title": "Hosted: Libro suggests review dates",
+      "description": "Hosted: Libro suggests review dates.",
+      "tags": ["changelog"],
+      "body": "Hosted: Libro suggests review dates.\n  - After each review, Jev reads the concepts written or changed since it\n    last looked.\n  - For anything tied to a date, a version, a price, or a person, a\n    review date goes on the shelf, a month to a year out, as Jev judges.\n  - Set it, and it becomes the concept's `stale_after`. Dismiss it, and it\n    stays dismissed.\n  - Every plan gets this: it's Jev only."
+    },
+    {
+      "id": "changelog/author-entry-cutters-object-d-search-and-list-ta",
+      "type": "Note",
+      "title": "Author entry (Cutter's object D): search and list take author, for the con",
+      "description": "Author entry (Cutter's object D): `search` and `list` take `author`, for the concepts one writer wrote.",
+      "tags": ["changelog"],
+      "body": "Author entry (Cutter's object D): `search` and `list` take `author`,\n  for the concepts one writer wrote.\n  - Hosted: a member by email, `me`, or an agent by name. `get_concept`\n    lists a concept's `authors`, and the dashboard's concept page says who\n    wrote it.\n  - Local reads the Git log: a commit author's name or email, or `me`."
+    },
+    {
+      "id": "changelog/ids-are-never-reused-by-default-like-a-librarys-",
+      "type": "Note",
+      "title": "Ids are never reused by default, like a library's accession numbers (Dana, ch",
+      "description": "Ids are never reused by default, like a library's accession numbers (Dana, ch.",
+      "tags": ["changelog"],
+      "body": "Ids are never reused by default, like a library's accession numbers\n  (Dana, ch. XIX). A deleted concept's id, and the old id of a renamed\n  one, are retired:\n  - `ingest` never derives a retired id again;\n  - reading one says what became of it (deleted on a date, or renamed to\n    what);\n  - an explicit `id` may still take one, and the result says so in\n    `reused`.\n\n  Local keeps them in the bundle's `log.md` (OKF's update log); hosted\n  keeps them per workspace and adds `log.md` to the export."
+    },
+    {
+      "id": "changelog/the-ready-reference-file-hosted-every-search-is-",
+      "type": "Note",
+      "title": "The ready-reference file (hosted): every search is filed as a question, with w",
+      "description": "The ready-reference file (hosted): every `search` is filed as a question, with what it found and the concept the agent opened next.",
+      "tags": ["changelog"],
+      "body": "The ready-reference file (hosted): every `search` is filed as a question,\n  with what it found and the concept the agent opened next.\n  - Asked again, the earlier answer comes first (`ready_reference: true` on\n    the hit).\n  - Rewordings are grouped by embedding (Qwen3-Embedding-8B, run by\n    DeepInfra in the US, zero retention), and only when Jev judges they ask\n    the same thing. A rewording asked again gets the earlier answer too.\n  - Jev judges whether the results really answered the question.\n  - The Overview's reference desk shows what agents ask most and what found\n    no answer: the gaps to write down.\n  - Questions are kept 90 days, and a query carrying a secret is never kept."
+    },
+    {
+      "id": "changelog/libros-weekly-report-what-arrived-what-is-past-i",
+      "type": "Note",
+      "title": "Libro's weekly report: what arrived, what is past its review date, what waits on",
+      "description": "Libro's weekly report: what arrived, what is past its review date, what waits on the shelf, what agents read, and the questions with no answer.",
+      "tags": ["changelog"],
+      "body": "Libro's weekly report: what arrived, what is past its review date, what\n  waits on the shelf, what agents read, and the questions with no answer.\n  It is live on the Overview and emailed every Monday (admins by default),\n  with one-click unsubscribe."
+    },
+    {
+      "id": "changelog/library-science-in-the-thesaurus-related-terms-s",
+      "type": "Note",
+      "title": "Library science in the thesaurus: related terms (\"see also\") and a scope_note",
+      "description": "Library science in the thesaurus: `related` terms (\"see also\") and a `scope_note` per tag, shaped like ANSI/NISO Z39.",
+      "tags": ["changelog"],
+      "body": "Library science in the thesaurus: `related` terms (\"see also\") and a\n  `scope_note` per tag, shaped like ANSI/NISO Z39.19. A `tag` filter on\n  `search` and `list` now includes the tag's narrower terms."
+    },
+    {
+      "id": "changelog/review-dates-ingest-and-update-take-staleafter-o",
+      "type": "Note",
+      "title": "Review dates: ingest and update take stale_after (OKF), every summary carr",
+      "description": "Review dates: `ingest` and `update` take `stale_after` (OKF), every summary carries `stale_after` and `stale`, `weed_report` lists concepts past their date, and `update` takes `verify: true` to record a check (OKF `verified`).",
+      "tags": ["changelog"],
+      "body": "Review dates: `ingest` and `update` take `stale_after` (OKF), every\n  summary carries `stale_after` and `stale`, `weed_report` lists concepts\n  past their date, and `update` takes `verify: true` to record a check (OKF\n  `verified`)."
+    },
+    {
+      "id": "changelog/hosted-libro-puts-concepts-past-their-review-dat",
+      "type": "Note",
+      "title": "Hosted: Libro puts concepts past their review date on the review shelf (\"Still t",
+      "description": "Hosted: Libro puts concepts past their review date on the review shelf (\"Still true\" or \"Retire\"), and Jev checks Libro's merge drafts against their sources.",
+      "tags": ["changelog"],
+      "body": "Hosted: Libro puts concepts past their review date on the review shelf\n  (\"Still true\" or \"Retire\"), and Jev checks Libro's merge drafts against\n  their sources."
+    },
+    {
+      "id": "changelog/hosted-cataloging-is-harder-to-fool-jev-reads-ea",
+      "type": "Note",
+      "title": "Hosted cataloging is harder to fool: Jev reads each tag's scope note and the tit",
+      "description": "Hosted cataloging is harder to fool: Jev reads each tag's scope note and the titles already filed under it, a broader tag gives way to a narrower one (Cutter's specific entry), anything Gemini writes is checked by Jev before it is kept, and",
+      "tags": ["changelog"],
+      "body": "Hosted cataloging is harder to fool: Jev reads each tag's scope note and\n  the titles already filed under it, a broader tag gives way to a narrower\n  one (Cutter's specific entry), anything Gemini writes is checked by Jev\n  before it is kept, and `cataloged` records how each field was filled."
+    },
+    {
+      "id": "changelog/docs-library-science",
+      "type": "Note",
+      "title": "docs/library-science",
+      "description": "`docs/library-science.",
+      "tags": ["changelog"],
+      "body": "`docs/library-science.md`: librocat checked against Dana's _A Library\n  Primer_ and Cutter's _Rules for a Dictionary Catalogue_."
+    },
+    {
+      "id": "changelog/the-site-says-what-librocat-is-the-open-source-k",
+      "type": "Note",
+      "title": "The site says what librocat is: the open-source knowledge base for AI agents, ma",
+      "description": "The site says what librocat is: the open-source knowledge base for AI agents, managed by Libro, an AI librarian.",
+      "tags": ["changelog"],
+      "body": "The site says what librocat is: the open-source knowledge base for AI\n  agents, managed by Libro, an AI librarian. It's an LLM wiki in Google's\n  Open Knowledge Format, organized with library science. New sections on\n  the landing page: what Libro does, the library-science practices, the\n  open standards underneath, and a FAQ."
+    },
+    {
+      "id": "changelog/the-dashboard-is-built-from-shadcn-ui-throughout",
+      "type": "Note",
+      "title": "The dashboard is built from shadcn/ui throughout: - the sidebar layout, with a u",
+      "description": "The dashboard is built from shadcn/ui throughout: - the sidebar layout, with a user menu and breadcrumbs; - Field forms, and an eight-digit code input for sign-in codes; - Empty states, Skeleton loading screens, and a Switch for pay-as-you-",
+      "tags": ["changelog"],
+      "body": "The dashboard is built from shadcn/ui throughout:\n  - the sidebar layout, with a user menu and breadcrumbs;\n  - Field forms, and an eight-digit code input for sign-in codes;\n  - Empty states, Skeleton loading screens, and a Switch for\n    pay-as-you-go;\n  - tooltips on copy buttons."
+    },
+    {
+      "id": "changelog/a-concepts-page-shows-its-review-date-when-it-wa",
+      "type": "Note",
+      "title": "A concept's page shows its review date, when it was last verified, and how it wa",
+      "description": "A concept's page shows its review date, when it was last verified, and how it was cataloged.",
+      "tags": ["changelog"],
+      "body": "A concept's page shows its review date, when it was last verified, and\n  how it was cataloged."
+    },
+    {
+      "id": "changelog/librocat-never-stores-secrets",
+      "type": "Note",
+      "title": "librocat never stores secrets",
+      "description": "librocat never stores secrets.",
+      "tags": ["changelog"],
+      "body": "librocat never stores secrets. `ingest` and `update` refuse text that\n  carries a private key or an API key in a known format (AWS, GitHub,\n  Stripe, Anthropic, OpenAI, Slack, Google, npm), locally and hosted, and\n  `ingest_repo` leaves out a file that carries one. The error says what to\n  record instead: where the secret lives."
+    },
+    {
+      "id": "changelog/the-hosted-library-has-a-free-plan-1-000-concept",
+      "type": "Note",
+      "title": "The hosted library has a Free plan: 1,000 concepts, automatic cataloging, and th",
+      "description": "The hosted library has a Free plan: 1,000 concepts, automatic cataloging, and the weekly review shelf, with no card.",
+      "tags": ["changelog"],
+      "body": "The hosted library has a Free plan: 1,000 concepts, automatic cataloging,\n  and the weekly review shelf, with no card."
+    },
+    {
+      "id": "changelog/hosted-cataloging-is-jev-first",
+      "type": "Note",
+      "title": "Hosted cataloging is Jev-first",
+      "description": "Hosted cataloging is Jev-first.",
+      "tags": ["changelog"],
+      "body": "Hosted cataloging is Jev-first. Jev, a small judgment model on the Vercel\n  AI Gateway, picks a description from the concept's own sentences and tags\n  from the workspace's vocabulary. On Individual and Team, Gemini 3.8 Flash\n  writes only what Jev could not fill."
+    },
+    {
+      "id": "changelog/before-libro-the-library-cat-reads-a-library-jev",
+      "type": "Note",
+      "title": "Before Libro, the library cat, reads a library, Jev screens it for likely duplic",
+      "description": "Before Libro, the library cat, reads a library, Jev screens it for likely duplicates.",
+      "tags": ["changelog"],
+      "body": "Before Libro, the library cat, reads a library, Jev screens it for likely\n  duplicates. A library with nothing new skips the session and keeps its\n  credit. Libro runs on Gemini 3.8 Flash and asks Jev yes/no questions\n  through a new `judge` tool."
+    },
+    {
+      "id": "changelog/the-agent-plugin-connects-to-the-hosted-library-",
+      "type": "Note",
+      "title": "The Agent Plugin connects to the hosted library, https://librocat",
+      "description": "The Agent Plugin connects to the hosted library, `https://librocat.",
+      "tags": ["changelog"],
+      "body": "The Agent Plugin connects to the hosted library, `https://librocat.dev/mcp`,\n  over Streamable HTTP. Agents sign in through the browser (OAuth 2.1): no\n  server to run and no key to paste, and every agent talks to the current\n  version. The plugin no longer ships a server."
+    },
+    {
+      "id": "changelog/the-npm-package-librocat-is-now-the-cli-start-th",
+      "type": "Note",
+      "title": "The npm package librocat is now the CLI: start (the local library at http:/",
+      "description": "The npm package `librocat` is now the CLI: `start` (the local library at `http://127.",
+      "tags": ["changelog"],
+      "body": "The npm package `librocat` is now the CLI: `start` (the local library at\n  `http://127.0.0.1:4747/mcp`), `mcp` (the local library on stdio, or\n  `--remote` for the hosted one), `login` (OAuth in the browser), `logout`,\n  `whoami`, `push`, and the new `pull`. A bare `librocat` on pipes still\n  serves the local library on stdio, so pre-3.0 MCP configs keep working."
+    },
+    {
+      "id": "changelog/workspace-api-tokens-librocattoken-librocatmode-",
+      "type": "Note",
+      "title": "Workspace API tokens: LIBROCAT_TOKEN, LIBROCAT_MODE, and the token switch be",
+      "description": "Workspace API tokens: `LIBROCAT_TOKEN`, `LIBROCAT_MODE`, and the token switch between tiers.",
+      "tags": ["changelog"],
+      "body": "Workspace API tokens: `LIBROCAT_TOKEN`, `LIBROCAT_MODE`, and the token\n  switch between tiers. Hosted access is OAuth only."
+    },
+    {
+      "id": "changelog/the-review-shelf-and-billing-refresh-right-after",
+      "type": "Note",
+      "title": "The review shelf and Billing refresh right after an action, instead of showing t",
+      "description": "The review shelf and Billing refresh right after an action, instead of showing the page from before it.",
+      "tags": ["changelog"],
+      "body": "The review shelf and Billing refresh right after an action, instead of\n  showing the page from before it."
+    },
+    {
+      "id": "changelog/hosted-agents-could-not-get-a-token-once-there-w",
+      "type": "Note",
+      "title": "Hosted: agents could not get a token once there were two signing keys, which two",
+      "description": "Hosted: agents could not get a token once there were two signing keys, which two first sign-ins at the same moment each create.",
+      "tags": ["changelog"],
+      "body": "Hosted: agents could not get a token once there were two signing keys,\n  which two first sign-ins at the same moment each create."
+    },
+    {
+      "id": "changelog/hosted-deleting-an-account-now-also-removes-the-",
+      "type": "Note",
+      "title": "Hosted: deleting an account now also removes the codes emailed to it that were n",
+      "description": "Hosted: deleting an account now also removes the codes emailed to it that were never used, and any OAuth client the person registered.",
+      "tags": ["changelog"],
+      "body": "Hosted: deleting an account now also removes the codes emailed to it\n  that were never used, and any OAuth client the person registered."
+    },
+    {
+      "id": "privacy/what-we-store",
+      "type": "Note",
+      "title": "What we store",
+      "description": "Laughing Hermit, Inc.",
+      "tags": ["privacy"],
+      "body": "Laughing Hermit, Inc. operates librocat and is the data controller. We store your account email, your workspace's concepts (the knowledge you and your agents write), the derived index (search text, and one embedding per concept), a revision per write, Libro's review-shelf proposals, usage counters (concept retrievals and index credits), and the ready-reference file: the questions your agents ask the library (search queries), what they found, and which concept answered them, so a question asked again gets its answer first and Libro can report what found no answer. A query that looks like it carries a secret is never kept. Billing runs through Stripe. We never see or store card numbers."
+    },
+    {
+      "id": "privacy/what-we-do-not-do",
+      "type": "Note",
+      "title": "What we do not do",
+      "description": "We do not sell your data.",
+      "tags": ["privacy"],
+      "body": "We do not sell your data. We do not train models on your concepts. Automatic cataloging sends only the concept being described (title, type, body) and your workspace's tag names to a model, and stores only the result in your workspace. Before Libro's weekly review, only the titles, descriptions, and tags of concepts that may be duplicates are sent. After it, Jev reads the concepts written or changed since it last looked (title, description, and the start of the body, up to 20 a review) to suggest a review date for what is tied to a date. Jev also judges pairs an embedding proposes: concepts that may say the same thing (up to 20 pairs a review), and the concepts a question that found no answer is about (up to 10 questions a review), from their titles, descriptions, tags, and the start of their bodies. On paid plans, Libro, the library cat, then reads the concepts it reviews with a model. These requests go through Vercel's AI Gateway, only to models whose providers do not train on them, and the generative ones (Gemini, and Libro's own model) ask for zero data retention. Embeddings come from Qwen3-Embedding, an open model that DeepInfra runs in the US with zero data retention (nothing is sent to its maker, Alibaba). Each question's text is embedded to group rewordings, and each concept's title, description, and the start of its body to find duplicates and the concepts behind unanswered questions. One vector per distinct question and one per concept are kept, and each is deleted with its question or concept."
+    },
+    {
+      "id": "privacy/who-processes-it",
+      "type": "Note",
+      "title": "Who processes it",
+      "description": "Four providers, each for one job: Convex stores the database and runs the functions; Vercel hosts the site, the MCP endpoint, and Libro, and routes model requests through its AI Gateway to the model provider; Resend sends sign-in and verifi",
+      "tags": ["privacy"],
+      "body": "Four providers, each for one job: Convex stores the database and runs the functions; Vercel hosts the site, the MCP endpoint, and Libro, and routes model requests through its AI Gateway to the model provider; Resend sends sign-in and verification emails and, if you keep it on, Libro's weekly report to your address; and Stripe handles payment. Nobody else receives your data."
+    },
+    {
+      "id": "privacy/how-long-we-keep-it",
+      "type": "Note",
+      "title": "How long we keep it",
+      "description": "Until you delete it.",
+      "tags": ["privacy"],
+      "body": "Until you delete it. Questions in the ready-reference file are kept 90 days, then deleted. Delete index erases every concept, link, revision, and question at once. When an account closes, we erase its workspace within 30 days, and backups roll off within 30 days after that."
+    },
+    {
+      "id": "privacy/cookies",
+      "type": "Note",
+      "title": "Cookies",
+      "description": "One essential cookie keeps you signed in to the dashboard.",
+      "tags": ["privacy"],
+      "body": "One essential cookie keeps you signed in to the dashboard. There are no analytics or advertising cookies today. If that changes, this page changes first."
+    },
+    {
+      "id": "privacy/your-data-your-exit",
+      "type": "Note",
+      "title": "Your data, your exit",
+      "description": "The dashboard has two buttons: Export downloads your whole index as a plain OKF zip that works with local librocat, and Delete erases every concept, link, and revision in the workspace.",
+      "tags": ["privacy"],
+      "body": "The dashboard has two buttons: Export downloads your whole index as a plain OKF zip that works with local librocat, and Delete erases every concept, link, and revision in the workspace. No email, no ticket, no retention games."
+    },
+    {
+      "id": "privacy/local-librocat",
+      "type": "Note",
+      "title": "Local librocat",
+      "description": "librocat run locally (`librocat start`) runs entirely on your machine and sends us nothing.",
+      "tags": ["privacy"],
+      "body": "librocat run locally (`librocat start`) runs entirely on your machine and sends us nothing. Your knowledge lives as Markdown in your own Git repo (GitHub, GitLab, or anywhere). We never see it."
+    },
+    {
+      "id": "privacy/contact",
+      "type": "Note",
+      "title": "Contact",
+      "description": "Questions or deletion requests beyond the self-serve buttons: Laughing Hermit, Inc.",
+      "tags": ["privacy"],
+      "body": "Questions or deletion requests beyond the self-serve buttons: Laughing Hermit, Inc., ."
+    },
+    {
+      "id": "security/hosted-where-your-data-lives",
+      "type": "Note",
+      "title": "Hosted: where your data lives",
+      "description": "Four providers, one job each.",
+      "tags": ["security"],
+      "body": "Four providers, one job each. Vercel hosts the site, the MCP endpoint, and Libro, the review agent. Convex stores the database and runs the functions. Resend sends sign-in emails. Stripe handles payment, and we never see card numbers. Automatic cataloging sends one concept at a time (title, type, body) and your tag names through the Vercel AI Gateway, first to Jev, a small judgment model that picks from the concept's own sentences and your tags, and on paid plans to Gemini Flash for what Jev could not fill. After Libro's weekly review, Jev also reads what changed since, to suggest review dates, and judges what an embedding proposes: concepts that may say the same thing, and the concepts a question that found no answer is about. Embeddings come from Qwen3-Embedding, an open model DeepInfra runs in the US, and every embedding request requires zero data retention. Gemini and Libro's own model run with zero data retention requested, the providers of every model librocat uses do not train on its requests, and only the result is stored. librocat refuses to store anything that looks like a secret key."
+    },
+    {
+      "id": "security/access-your-sign-in-and-the-agents-you-approve",
+      "type": "Note",
+      "title": "Access: your sign-in, and the agents you approve",
+      "description": "Agents connect over OAuth 2.",
+      "tags": ["security"],
+      "body": "Agents connect over OAuth 2.1. An agent's first call opens your browser: you sign in and approve that agent, and it receives a signed access token bound to librocat's MCP endpoint and to your account, valid for one hour and renewed with a refresh token. Every call is checked twice, by the endpoint and by the database, and each call also checks that you still approve that agent: disconnect it on the Connect page and it is cut off on its next call. There is no API key to copy, paste, or leak. The dashboard signs you in with email and password, verified by an emailed code."
+    },
+    {
+      "id": "security/who-can-see-your-data",
+      "type": "Note",
+      "title": "Who can see your data",
+      "description": "Laughing Hermit, Inc.",
+      "tags": ["security"],
+      "body": "Laughing Hermit, Inc. is a small studio. Operators have administrative access to production to run the service. We open a workspace's concepts only to resolve an incident or a support request you made, never to train models, and never for any other purpose. We do not sell data."
+    },
+    {
+      "id": "security/your-exit",
+      "type": "Note",
+      "title": "Your exit",
+      "description": "Export downloads the whole workspace as an OKF zip that the free Local tool reads.",
+      "tags": ["security"],
+      "body": "Export downloads the whole workspace as an OKF zip that the free Local tool reads. Delete index erases every concept, link, and revision at once. When an account closes, we erase its workspace within 30 days, and backups roll off within 30 days after that."
+    },
+    {
+      "id": "terms/the-deal",
+      "type": "Note",
+      "title": "The deal",
+      "description": "librocat Cloud is operated by Laughing Hermit, Inc.",
+      "tags": ["terms"],
+      "body": "librocat Cloud is operated by Laughing Hermit, Inc. (\"we\"). It hosts your library (the concepts you and your agents write) and serves it to your agents over MCP. The Free plan costs nothing. Paid plans are billed monthly or yearly through Stripe, plus any pay-as-you-go usage you turned on. Cancel whenever. A paid plan runs to the end of the paid period, monthly or yearly."
+    },
+    {
+      "id": "terms/the-free-plan",
+      "type": "Note",
+      "title": "The Free plan",
+      "description": "Every account starts on the Free plan, with the limits stated on the pricing page.",
+      "tags": ["terms"],
+      "body": "Every account starts on the Free plan, with the limits stated on the pricing page. We may change those limits, with notice by email. When a paid plan ends, the workspace returns to Free: nothing is deleted, but new concepts wait until the library is back under the Free limit. There is no trial of the paid plans. Local, open source under Apache-2.0, runs on your machine and needs no account."
+    },
+    {
+      "id": "terms/refunds-and-price-changes",
+      "type": "Note",
+      "title": "Refunds and price changes",
+      "description": "Payments are for the period you chose.",
+      "tags": ["terms"],
+      "body": "Payments are for the period you chose. We do not refund the unused part of a period, unless the law where you live requires it. If we raise a price, the new price applies from your next renewal, and we tell you by email at least 30 days before."
+    },
+    {
+      "id": "terms/team-plans",
+      "type": "Note",
+      "title": "Team plans",
+      "description": "A Team plan is one shared workspace for up to 10 people, each signed in with their own account.",
+      "tags": ["terms"],
+      "body": "A Team plan is one shared workspace for up to 10 people, each signed in with their own account. The account holder is responsible for who they invite, and for removing people who leave."
+    },
+    {
+      "id": "terms/your-account",
+      "type": "Note",
+      "title": "Your account",
+      "description": "You need an account to use Cloud, free or paid.",
+      "tags": ["terms"],
+      "body": "You need an account to use Cloud, free or paid. Keep your password secret. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page if you no longer trust it. You must be old enough to enter a contract where you live."
+    },
+    {
+      "id": "terms/your-content",
+      "type": "Note",
+      "title": "Your content",
+      "description": "What you store stays yours.",
+      "tags": ["terms"],
+      "body": "What you store stays yours. You give us only the rights needed to store, index, catalog, and serve it to you and your agents. Do not store content you have no right to store, or content that is illegal where you or we operate. We can remove content that breaks the law or these terms, and we will tell you when we do."
+    },
+    {
+      "id": "terms/fair-use-of-the-service",
+      "type": "Note",
+      "title": "Fair use of the service",
+      "description": "Do not attack or overload the service, work around its quotas (for example with many Free accounts), or resell access to it as your own.",
+      "tags": ["terms"],
+      "body": "Do not attack or overload the service, work around its quotas (for example with many Free accounts), or resell access to it as your own. The code is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service. Quotas (concepts, index credits, users) are stated on the pricing page and enforced in the product."
+    },
+    {
+      "id": "terms/availability-and-changes",
+      "type": "Note",
+      "title": "Availability and changes",
+      "description": "We aim to keep Cloud available, but we do not promise uptime and we may change or retire features.",
+      "tags": ["terms"],
+      "body": "We aim to keep Cloud available, but we do not promise uptime and we may change or retire features. Material changes to price or terms come with notice by email. If you disagree, cancel and export your library."
+    },
+    {
+      "id": "terms/termination",
+      "type": "Note",
+      "title": "Termination",
+      "description": "You can delete your library from the dashboard and cancel your subscription.",
+      "tags": ["terms"],
+      "body": "You can delete your library from the dashboard and cancel your subscription. We can suspend or end accounts that break these terms or do not pay. Either way, export is available before deletion."
+    },
+    {
+      "id": "terms/contact",
+      "type": "Note",
+      "title": "Contact",
+      "description": "Laughing Hermit, Inc.",
+      "tags": ["terms"],
+      "body": "Laughing Hermit, Inc., . These terms are governed by the laws of , without regard to its conflict-of-law rules."
+    },
+    {
+      "id": "about/what-librocat-is",
+      "type": "Note",
+      "title": "What librocat is",
+      "description": "The open-source knowledge base for AI agents, managed by Libro, an AI librarian.",
+      "tags": ["about"],
+      "body": "The open-source knowledge base for AI agents, managed by Libro, an AI librarian. Your agents write to it and read from it over MCP; Libro catalogs, cross-references, and keeps it current. It is an LLM wiki (the pattern Andrej Karpathy described: a wiki an LLM maintains) stored as Google's Open Knowledge Format (OKF) Markdown, organized with library and information science proven over centuries. Hosted at librocat.dev/mcp for every agent and every machine, free to start, or run it on your own."
+    },
+    {
+      "id": "about/why-a-library-not-a-database",
+      "type": "Note",
+      "title": "Why a library, not a database",
+      "description": "A database stores rows.",
+      "tags": ["about"],
+      "body": "A database stores rows. A library catalogs, cross-references, weeds, and hands you the whole picture. librocat applies a century of library and information science to Markdown your agents can use: cataloging, controlled vocabulary, authority control, weeding."
+    },
+    {
+      "id": "about/libro-the-library-cat",
+      "type": "Note",
+      "title": "Libro, the library cat",
+      "description": "The cat in librocat is Libro, the library cat: our librarian, and the reason librocat is a managed knowledge base rather than a folder of notes.",
+      "tags": ["about"],
+      "body": "The cat in librocat is Libro, the library cat: our librarian, and the reason librocat is a managed knowledge base rather than a folder of notes. Libro catalogs what your agents write, puts anything past its review date, duplicated, or unread on a review shelf, drafts merges and checks them against their sources, and reports what the library shows. Libro proposes. You decide. Every approval is a revision you can undo."
+    },
+    {
+      "id": "about/who-makes-it",
+      "type": "Note",
+      "title": "Who makes it",
+      "description": "Laughing Hermit, Inc.",
+      "tags": ["about"],
+      "body": "Laughing Hermit, Inc., a small studio. One product, one domain (librocat.dev), one promise: your memory stays yours. Export everything, anytime. Delete in one click. Cancel whenever."
+    },
+    {
+      "id": "about/open-source-all-of-it",
+      "type": "Note",
+      "title": "Open source, all of it",
+      "description": "librocat is Apache-2.",
+      "tags": ["about"],
+      "body": "librocat is Apache-2.0 on GitHub, all of it: the MCP server, the CLI, the skills, the dashboard, the hosted backend, and Libro. The code that runs librocat.dev is the code you can read and run yourself. Nothing you store is trapped: the export is the same OKF files local librocat reads."
+    },
+    {
+      "id": "disclaimer/what-librocat-is",
+      "type": "Note",
+      "title": "What librocat is",
+      "description": "At its core, librocat (a Laughing Hermit, Inc.",
+      "tags": ["disclaimer"],
+      "body": "At its core, librocat (a Laughing Hermit, Inc. product) is a library and information science tool: it catalogs, indexes, and serves the knowledge you and your agents put into it. It applies classification, controlled vocabulary, and weeding practice to Markdown files. It is infrastructure, not an oracle."
+    },
+    {
+      "id": "disclaimer/what-librocat-is-not-responsible-for",
+      "type": "Note",
+      "title": "What librocat is not responsible for",
+      "description": "librocat stores and retrieves what you give it.",
+      "tags": ["disclaimer"],
+      "body": "librocat stores and retrieves what you give it. It does not verify, generate, or endorse the content of your concepts, and it does not make decisions. Your agents and your team do. You are responsible for the accuracy of the knowledge you store, for the actions your agents take with it, and for any decision made on top of it."
+    },
+    {
+      "id": "disclaimer/libro-can-be-wrong",
+      "type": "Note",
+      "title": "Libro can be wrong",
+      "description": "In the hosted library, Libro, the library cat, writes the description and tags your agent left blank, and once a week proposes supersessions, retirements, and tag merges.",
+      "tags": ["disclaimer"],
+      "body": "In the hosted library, Libro, the library cat, writes the description and tags your agent left blank, and once a week proposes supersessions, retirements, and tag merges. A catalog record is not a judgment, and it can be wrong. Nothing on the review shelf changes until you approve it, and every write is a revision, so you can always see and undo what was added."
+    },
+    {
+      "id": "disclaimer/not-professional-advice",
+      "type": "Note",
+      "title": "Not professional advice",
+      "description": "Nothing stored in or retrieved from librocat is legal, medical, financial, or engineering advice.",
+      "tags": ["disclaimer"],
+      "body": "Nothing stored in or retrieved from librocat is legal, medical, financial, or engineering advice. It is what you and your agents put there."
+    },
+    {
+      "id": "disclaimer/limitation-of-liability",
+      "type": "Note",
+      "title": "Limitation of liability",
+      "description": "To the maximum extent permitted by law, Laughing Hermit, Inc.",
+      "tags": ["disclaimer"],
+      "body": "To the maximum extent permitted by law, Laughing Hermit, Inc. is not liable for indirect, incidental, or consequential damages, or for losses arising from decisions made by you, your team, or your AI agents using knowledge stored in or retrieved from librocat."
+    },
+    {
+      "id": "disclaimer/certifications",
+      "type": "Note",
+      "title": "Certifications",
+      "description": "librocat does not currently hold SOC 2 or ISO 27001 certification.",
+      "tags": ["disclaimer"],
+      "body": "librocat does not currently hold SOC 2 or ISO 27001 certification. If your organization needs formal attestations, contact us about the Enterprise plan before storing regulated data."
+    }
+  ],
+  "questions": [
+    {
+      "kind": "keyword",
+      "q": "run librocat locally with npx librocat start",
+      "want": ["local/run-it", "readme/local", "npm/run-it-locally"]
+    },
+    {
+      "kind": "keyword",
+      "q": "export and delete the workspace data",
+      "want": [
+        "cloud/your-data-export-and-delete",
+        "privacy/your-data-your-exit",
+        "security/your-exit"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "Orama bm25 search in the local tier",
+      "want": ["architecture/search"]
+    },
+    {
+      "kind": "keyword",
+      "q": "self-hosting with Docker Compose or Podman",
+      "want": [
+        "self-hosting/start",
+        "readme/self-hosted",
+        "local/self-hosting-the-full-service",
+        "changelog/self-hosting-self-host-runs-the-whole-hosted-ser",
+        "self-hosting/what-runs"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "index credits for automatic indexation",
+      "want": ["cloud/automatic-indexation-and-index-credits"]
+    },
+    {
+      "kind": "keyword",
+      "q": "reserved files index.md and log.md in an OKF bundle",
+      "want": ["okf/reserved-files"]
+    },
+    {
+      "kind": "keyword",
+      "q": "Dublin Core mapping of OKF frontmatter",
+      "want": ["okf/dublin-core-roughly"]
+    },
+    {
+      "kind": "keyword",
+      "q": "favicon silhouette of Libro's head",
+      "want": ["brand/the-favicon-libros-head-as-a-silhouette-from-the"]
+    },
+    {
+      "kind": "keyword",
+      "q": "logo palette hex colors",
+      "want": ["brand/palette-from-the-site-theme-apps-web-src-app-glo"]
+    },
+    {
+      "kind": "keyword",
+      "q": "OAuth 2.1 sign-in with Better Auth for the remote MCP",
+      "want": [
+        "cloud/auth-oauth-2-1-one-identity-for-both-doors",
+        "security/access-your-sign-in-and-the-agents-you-approve"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "several libraries per account with a library slug in the MCP URL",
+      "want": [
+        "cloud/several-libraries",
+        "changelog/several-libraries-per-account-like-supabase-proj"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "the ready-reference file",
+      "want": [
+        "cloud/the-reference-desk-and-libros-weekly-report",
+        "library-science/the-ready-reference-file-and-libros-report-built",
+        "changelog/the-ready-reference-file-hosted-every-search-is-"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "accession numbers are never reused",
+      "want": [
+        "library-science/accession-numbers-are-never-reused-built-2026-09",
+        "changelog/ids-are-never-reused-by-default-like-a-librarys-",
+        "okf/2026-09-26"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "Turborepo, Biome and Vitest versions",
+      "want": ["toollist/build-test-lint"]
+    },
+    {
+      "kind": "keyword",
+      "q": "GitHub Actions CI on every push",
+      "want": ["toollist/automation"]
+    },
+    {
+      "kind": "keyword",
+      "q": "which cookies does the dashboard set",
+      "want": ["privacy/cookies"]
+    },
+    {
+      "kind": "keyword",
+      "q": "SOC 2 or ISO 27001 certification",
+      "want": ["disclaimer/certifications"]
+    },
+    {
+      "kind": "keyword",
+      "q": "refunds and price changes",
+      "want": ["terms/refunds-and-price-changes"]
+    },
+    {
+      "kind": "keyword",
+      "q": "Team plan for up to 10 people",
+      "want": ["terms/team-plans", "cloud/plans-and-quota"]
+    },
+    {
+      "kind": "keyword",
+      "q": "librocat push and pull between local and hosted",
+      "want": ["local/local-and-hosted-together", "npm/move-a-library-between-the-two"]
+    },
+    {
+      "kind": "keyword",
+      "q": "reverse proxy with TLS on a server with a domain",
+      "want": ["self-hosting/on-a-server-with-a-domain"]
+    },
+    {
+      "kind": "keyword",
+      "q": "deploy the Libro eve agent",
+      "want": ["libro-agent/deploy"]
+    },
+    {
+      "kind": "keyword",
+      "q": "Cutter's objects of the catalog",
+      "want": ["library-science/cutters-objects-of-the-catalog"]
+    },
+    {
+      "kind": "keyword",
+      "q": "shelves: one library, many projects",
+      "want": ["okf/shelves-one-library-many-projects", "cloud/projects-are-shelves-not-libraries"]
+    },
+    {
+      "kind": "keyword",
+      "q": "sources and the changed tool for code changes",
+      "want": [
+        "npm/keep-it-current-as-the-code-changes",
+        "changelog/concepts-about-code-come-up-for-review-when-the-"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "Libro's weekly report email on Monday",
+      "want": [
+        "cloud/the-reference-desk-and-libros-weekly-report",
+        "changelog/libros-weekly-report-what-arrived-what-is-past-i",
+        "library-science/the-ready-reference-file-and-libros-report-built"
+      ]
+    },
+    {
+      "kind": "keyword",
+      "q": "fair use: many Free accounts to get around quotas",
+      "want": ["terms/fair-use-of-the-service"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what happens to my stuff if I want to leave the service?",
+      "want": [
+        "privacy/your-data-your-exit",
+        "security/your-exit",
+        "cloud/your-data-export-and-delete",
+        "terms/termination"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "can I use this without an internet connection?",
+      "want": ["local/run-it", "readme/local", "npm/run-it-locally", "privacy/local-librocat"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "who else gets to look at what my agents save?",
+      "want": ["security/who-can-see-your-data", "privacy/who-processes-it"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "is the AI allowed to learn from the notes I keep in here?",
+      "want": [
+        "privacy/what-we-do-not-do",
+        "security/who-can-see-your-data",
+        "security/hosted-where-your-data-lives"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how much would it cost for a group of engineers?",
+      "want": ["terms/team-plans", "cloud/plans-and-quota"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "why not just put everything in Postgres?",
+      "want": ["about/why-a-library-not-a-database"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how does it avoid making things up when it fills in summaries?",
+      "want": [
+        "library-science/how-the-cataloging-pipeline-avoids-hallucination",
+        "changelog/hosted-cataloging-is-harder-to-fool-jev-reads-ea",
+        "disclaimer/libro-can-be-wrong"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what's the mascot called?",
+      "want": [
+        "brand/the-idea-libro-in-a-badge-drawn-in-one-line-the-",
+        "about/libro-the-library-cat",
+        "cloud/libro-the-library-cat"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "I edited the markdown files by hand; how do I get search to see my edits?",
+      "want": [
+        "local/workflow",
+        "cloud/how-the-remote-mcp-works",
+        "cloud/two-ways-to-reach-it-directly-or-through-the-lib"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "which company is behind this product?",
+      "want": ["about/who-makes-it", "terms/the-deal", "privacy/what-we-store"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "can my coworkers share one knowledge base with me?",
+      "want": ["terms/team-plans", "cloud/several-libraries", "cloud/plans-and-quota"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what if the service goes down?",
+      "want": ["terms/availability-and-changes"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "is there a way to see what was added recently?",
+      "want": [
+        "library-science/lists-of-additions-built-2026-09-27",
+        "changelog/lists-of-additions-danas-print-lists-of-addition"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how do you keep outdated information from misleading my agents?",
+      "want": [
+        "library-science/libros-job-keep-the-library-current-and-say-what",
+        "changelog/review-dates-ingest-and-update-take-staleafter-o",
+        "changelog/hosted-libro-puts-concepts-past-their-review-dat",
+        "changelog/hosted-libro-suggests-review-dates"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "which version of Node do the maintainers develop on?",
+      "want": ["toollist/runtime-and-package-management"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "will it keep API keys or passwords that I paste into a note?",
+      "want": ["changelog/librocat-never-stores-secrets"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how do my coding assistants log in without me copying a key around?",
+      "want": [
+        "cloud/auth-oauth-2-1-one-identity-for-both-doors",
+        "security/access-your-sign-in-and-the-agents-you-approve",
+        "changelog/the-agent-plugin-connects-to-the-hosted-library-"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what gets sent to my inbox every week?",
+      "want": [
+        "cloud/the-reference-desk-and-libros-weekly-report",
+        "changelog/libros-weekly-report-what-arrived-what-is-past-i"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "two notes say the same thing; will anything notice?",
+      "want": [
+        "changelog/libros-screens-by-meaning-on-every-plan-after-ev",
+        "changelog/before-libro-the-library-cat-reads-a-library-jev",
+        "cloud/libro-the-library-cat"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "which questions did my agents ask that nobody could answer?",
+      "want": [
+        "cloud/the-reference-desk-and-libros-weekly-report",
+        "library-science/the-ready-reference-file-and-libros-report-built",
+        "changelog/the-ready-reference-file-hosted-every-search-is-",
+        "changelog/libros-screens-by-meaning-on-every-plan-after-ev"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how was the cat drawing turned into a vector file?",
+      "want": ["brand/from-png-to-svg"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "can I sue you if the tool gives my agent bad information?",
+      "want": [
+        "disclaimer/limitation-of-liability",
+        "disclaimer/what-librocat-is-not-responsible-for",
+        "disclaimer/libro-can-be-wrong"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how do references between notes become connections an agent can follow?",
+      "want": ["okf/links-become-the-graph"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what are the naming rules for a note's identifier?",
+      "want": ["okf/ids-and-paths"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what's the least a note file needs at the top?",
+      "want": ["okf/a-concept"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "which parts cost money and which are free?",
+      "want": [
+        "cloud/plans-and-quota",
+        "terms/the-free-plan",
+        "changelog/the-hosted-library-has-a-free-plan-1-000-concept"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how does it decide which labels to put on a note?",
+      "want": [
+        "cloud/automatic-indexation-and-index-credits",
+        "changelog/hosted-cataloging-is-jev-first",
+        "library-science/how-the-cataloging-pipeline-avoids-hallucination",
+        "changelog/hosted-cataloging-is-harder-to-fool-jev-reads-ea"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "a note went out of date after a code change; how would I find out?",
+      "want": [
+        "npm/keep-it-current-as-the-code-changes",
+        "changelog/concepts-about-code-come-up-for-review-when-the-"
+      ]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "what do you store about me when I sign up?",
+      "want": ["privacy/what-we-store"]
+    },
+    {
+      "kind": "paraphrase",
+      "q": "how do I make a copy of everything on my own server in case the disk dies?",
+      "want": ["self-hosting/run-it"]
+    },
+    {
+      "kind": "none",
+      "q": "how do I configure Kubernetes autoscaling for the workers?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "what is our parental leave policy?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "how do I rotate the AWS root credentials?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "where is the GraphQL schema for the orders service?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "how do we set up the Slack integration for alerts?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "what should we cook for the team offsite dinner?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "what is the Redis cache eviction policy?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "how do I renew the push notification certificate for the iOS app?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "what are the quarterly sales targets for EMEA?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "how do we prepare for a HIPAA audit?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "how do I configure SSO with Okta?",
+      "want": []
+    },
+    {
+      "kind": "none",
+      "q": "who is on call this week?",
+      "want": []
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+diff --git a/dist/client/adapter-utils.js b/dist/client/adapter-utils.js
+index ed8f85781a3e210becb5eebbc80f1bccea36e146..6edb2baab35ff1423d2cc8437dacf272b7fef43b 100644
+--- a/dist/client/adapter-utils.js
++++ b/dist/client/adapter-utils.js
+@@ -210,7 +210,11 @@ filterWhere) => {
+             switch (w.operator) {
+                 case undefined:
+                 case "eq": {
+-                    return value === w.value;
++                    // A missing optional field reads as null: Better Auth's
++                    // refresh-token rotation guards on `revoked eq null`.
++                    return w.value === null
++                        ? value === null || value === undefined
++                        : value === w.value;
+                 }
+                 case "in": {
+                     return Array.isArray(w.value) && w.value.includes(value);
+@@ -232,7 +236,9 @@ filterWhere) => {
+                     return value === w.value || isGreaterThan(value, w.value);
+                 }
+                 case "ne": {
+-                    return value !== w.value;
++                    return w.value === null
++                        ? value !== null && value !== undefined
++                        : value !== w.value;
+                 }
+                 case "contains": {
+                     return typeof value === "string" && value.includes(w.value);
+diff --git a/src/client/adapter-utils.ts b/src/client/adapter-utils.ts
+index 7e04ffdf708ba6a26e7ad32c35675a155f3245b0..edbf9403e69212b00f80b2ea14d95139bcaffd28 100644
+--- a/src/client/adapter-utils.ts
++++ b/src/client/adapter-utils.ts
+@@ -343,7 +343,11 @@ const filterByWhere = <
+       switch (w.operator) {
+         case undefined:
+         case "eq": {
+-          return value === w.value;
++          // A missing optional field reads as null: Better Auth's
++          // refresh-token rotation guards on `revoked eq null`.
++          return w.value === null
++            ? value === null || value === undefined
++            : value === w.value;
+         }
+         case "in": {
+           return Array.isArray(w.value) && (w.value as any[]).includes(value);
+@@ -366,7 +370,9 @@ const filterByWhere = <
+           return value === w.value || isGreaterThan(value, w.value);
+         }
+         case "ne": {
+-          return value !== w.value;
++          return w.value === null
++            ? value !== null && value !== undefined
++            : value !== w.value;
+         }
+         case "contains": {
+           return typeof value === "string" && value.includes(w.value as string);

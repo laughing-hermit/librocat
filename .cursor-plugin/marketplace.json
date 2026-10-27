@@ -1,0 +1,17 @@
+{
+  "name": "librocat",
+  "owner": {
+    "name": "librocat",
+    "email": "support@librocat.com"
+  },
+  "metadata": {
+    "description": "librocat: The Open-Source Knowledge Base for AI Agents"
+  },
+  "plugins": [
+    {
+      "name": "librocat",
+      "source": "./plugin",
+      "description": "The Open-Source Knowledge Base for AI Agents. Tell one agent once, and every agent remembers: Claude Code, Codex, Cursor, Copilot, and every teammate's agent share one library, and Libro, an AI librarian, keeps it organized and current. Connects to librocat.com (sign in once in your browser) and adds the skills that teach an agent to use it well."
+    }
+  ]
+}

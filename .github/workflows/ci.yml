@@ -1,0 +1,46 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+  DO_NOT_TRACK: 1
+jobs:
+  secrets:
+    # Every push is scanned for committed credentials (the history too, on
+    # pull requests); verified finds fail the build.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Actions are pinned by commit (the repo requires it); Dependabot
+      # updates the pins monthly.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: trufflesecurity/trufflehog@31ce31ee1abbcc7dc8eee5764c17121c3044c8b2 # v3.99.7
+        with:
+          extra_args: --results=verified,unknown
+  monorepo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # reads the pnpm version from packageManager
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          runtime: node@24
+          cache: true
+          install: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run build
+      - run: pnpm run test
+      - run: pnpm run plugin

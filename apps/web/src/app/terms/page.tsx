@@ -1,0 +1,101 @@
+import { SitePage } from "@/components/site-chrome";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { site } from "@/lib/site";
+
+export const metadata = {
+  title: "Terms | librocat",
+  description:
+    "The terms of service for librocat Cloud: the plans, fair use, payment through Stripe's Managed Payments, and your rights to your data.",
+  alternates: { canonical: "/terms" },
+};
+
+// Plain-language terms for librocat Cloud, the hosted service. The code is
+// Apache-2.0, and that license governs the code.
+const sections = [
+  {
+    title: "The deal",
+    body: `librocat Cloud is a hosted knowledge base for AI agents, operated by ${site.company}, a Delaware corporation ("we", "us"). It stores your library (the concepts, sources, and files you and your agents add) and serves it to your agents over MCP. These terms are an agreement between you and us. By creating an account or using Cloud you accept them. If you use Cloud for an organization, you accept them for that organization and confirm that you may.`,
+  },
+  {
+    title: "Your account",
+    body: `You need an account to use Cloud. You must be at least 16, and old enough to enter a contract where you live. Use a real email address, keep your password and sign-in codes secret, and tell us at ${site.contact} if someone else got in. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page when you no longer trust it.`,
+  },
+  {
+    title: "Plans and limits",
+    body: "Every account starts on the Free plan. Each plan's limits (concepts, storage, descriptions and tags filled a month, people, and the monthly ceilings on calls, writes, and file transfer) are on the pricing at librocat.com/#pricing, and the product enforces them. We may change the Free plan's limits, with notice by email. When a paid plan ends, the library returns to Free: nothing is deleted, but new concepts and sources wait until the library is back under the Free limits. There is no trial of the paid plans.",
+  },
+  {
+    title: "Paying",
+    body: "Paid plans are billed monthly or yearly, in US dollars, plus any pay-as-you-go credits you turn on for Libro ($0.01 a credit: a concept cataloged, or about three pages of a file you add, up to the monthly cap you set), billed at the end of each period. Paid plans are sold through Link, Stripe's merchant of record service: Link is the seller on your receipt, charges your payment method, adds sales tax or VAT where it applies, and answers payment questions, and its own terms apply to the payment. Your statement shows LINK.COM* LIBROCAT. A plan renews at the end of each period until you cancel. Cancel anytime in Billing, and the plan runs to the end of the period you paid for.",
+  },
+  {
+    title: "Refunds and price changes",
+    body: "Payments cover the period you chose, and we do not refund the unused part of a period, except where the law requires it. Where consumer law gives you a right to cancel and get your money back, such as a cooling-off period, Link applies it, and it may refund a payment within 60 days of purchase. If we raise a price, the new price applies from your next renewal, and we tell you by email at least 30 days before.",
+  },
+  {
+    title: "Team plans",
+    body: "A Team plan covers up to 10 libraries its buyer owns, on one bill, for the people it has seats for (three or more, priced per person, each person counted once), each signed in with their own account. The libraries share the plan's limits. Whoever buys it is responsible for who joins through its invite links, and for removing people who leave. Members of a library see each other's email addresses and everything in that library. When the plan ends, its libraries go back to Free, with everything in them kept.",
+  },
+  {
+    title: "Your content",
+    body: "What you store stays yours. You give us only the rights needed to host, copy, index, catalog, and serve it to you, your team, and the agents you approve, and to back it up. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do.",
+  },
+  {
+    title: "Acceptable use",
+    body: "Do not use Cloud to break the law or infringe anyone's rights; to store malware, or other people's personal data without a lawful basis; to store secrets such as passwords and private keys (librocat refuses anything that looks like one); to attack, probe, or overload the service or its users; to work around its quotas, for example with many Free accounts; or to resell access to it as your own service. The software is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service.",
+  },
+  {
+    title: "Models and agents",
+    body: "librocat uses Jev, a small judgment model from TypeSafe AI, to catalog concepts and the files you add and to flag what may be duplicated or out of date, as the privacy page describes. Its picks, what it flags or misses, and search results can be wrong. Nothing in Needs you changes until you or your agent approves it, and every write is a revision you can see and undo. Your agents write and act for you, and you are responsible for what they do with what they read. Nothing in librocat is legal, medical, financial, or engineering advice.",
+  },
+  {
+    title: "Availability and changes",
+    body: `We work to keep Cloud available, but we do not promise uptime (${site.status.replace("https://", "")} shows how it runs), and we may change or retire features. We email you about material changes to prices or these terms at least 30 days before they take effect; other changes apply when we post them here, with a new date at the top. If you disagree with a change, cancel and export your library before it takes effect.`,
+  },
+  {
+    title: "Ending",
+    body: "You can delete a library, or your whole account, from the dashboard at any time, and cancel your subscription in Billing. Deleting a library, or the account, ends its plan at once and bills any pay-as-you-go credits used that period. We can suspend or close an account that breaks these terms or does not pay, with notice first unless the breach is serious or the law requires otherwise. Before anything is deleted, Export (in Settings) downloads your whole library. After an account closes, we erase its data as the privacy page describes.",
+  },
+  {
+    title: "Warranty",
+    body: 'Cloud is provided "as is" and "as available". To the extent the law allows, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.',
+  },
+  {
+    title: "Liability",
+    body: "To the extent the law allows, we are not liable for indirect, incidental, special, or consequential losses, or for lost profits, revenue, data, or goodwill, including losses from decisions made by you, your team, or your agents. Our total liability for all claims about Cloud is limited to what you paid us in the twelve months before the claim arose, or US$100, whichever is more.",
+  },
+  {
+    title: "Indemnity",
+    body: "If you use Cloud for a business, you will defend us against, and cover our losses from, claims by others that arise from your content or from your breaking these terms.",
+  },
+  {
+    title: "Law and disputes",
+    body: `These terms are governed by the laws of ${site.jurisdiction}, without regard to its conflict-of-law rules. Disputes go to the state or federal courts located in Delaware, and both of us accept their jurisdiction. If you are a consumer, nothing in these terms takes away rights that the law where you live gives you and does not let a contract remove, including the right to go to your local courts.`,
+  },
+  {
+    title: "General",
+    body: "These terms, with the pricing at librocat.com/#pricing and the privacy page, are the whole agreement about Cloud. If a part cannot be enforced, the rest still applies. Not enforcing a part is not a waiver of it. You may not transfer your account without our consent. We may transfer these terms to whoever takes over the service, and we will tell you if we do.",
+  },
+  {
+    title: "Contact",
+    body: `${site.company}, ${site.contact}.`,
+  },
+];
+
+export default function TermsPage() {
+  return (
+    <SitePage
+      title="Terms of service"
+      lede={`Plain language, for librocat Cloud. Last updated ${site.legalUpdated}.`}
+    >
+      {sections.map((s) => (
+        <Card key={s.title}>
+          <CardHeader>
+            <CardTitle>{s.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">{s.body}</CardContent>
+        </Card>
+      ))}
+    </SitePage>
+  );
+}

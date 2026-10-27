@@ -1,0 +1,9 @@
+# CLI uploads (`vercel deploy` from the repo root); the git integration ignores this file.
+dist
+.next
+.turbo
+node_modules
+*.tsbuildinfo
+.env*
+**/.env*
+.claude

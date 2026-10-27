@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "librocat": {
+      "type": "streamable-http",
+      "url": "https://librocat.com/mcp"
+    }
+  }
+}

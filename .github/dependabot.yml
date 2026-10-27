@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm # covers pnpm-lock.yaml
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ["*"]
+    ignore:
+      # held on 24.x on purpose: matches the Node 24 pinned in CI, on Vercel,
+      # and in packages/mcp's engines. See docs/toollist.md.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # held on 1.6 until @convex-dev/better-auth supports 1.7 (0.12.6 peers
+      # better-auth <1.7.0); its security alerts are dismissed, so this is the reminder.
+      - dependency-name: "better-auth"
+        versions: [">=1.7.0"]
+      - dependency-name: "@better-auth/*"
+        versions: [">=1.7.0"]
+      # moves with react-pdf, by hand: pdf.js refuses a worker of another
+      # version than its API (tests/pdf-viewer.test.ts).
+      - dependency-name: "pdfjs-dist"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

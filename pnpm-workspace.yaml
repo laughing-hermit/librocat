@@ -1,0 +1,21 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm runs no install scripts unless the package is listed here.
+allowBuilds:
+  esbuild: false # its postinstall swaps bin/esbuild for the raw binary, which breaks the pnpm shim; the JS shim finds @esbuild/linux-x64 on its own
+  sharp: true
+  unrs-resolver: true
+
+# Security patches for transitive deps of shadcn's bundled MCP SDK (dev-only
+# tooling, not shipped code). The SDK's own ranges already allow these
+# patches; pnpm just hadn't picked them up.
+overrides:
+  fast-uri: "^3.1.6" # GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp
+  js-yaml: "^4.3.2" # GHSA-2883-xcg3-v3hh
+  hono: "^4.13.5" # GHSA-crvj-82cr-hjcx, GHSA-g6gw-c38x-mqfc, GHSA-gqvv-2mrq-wpjv
+  qs: "^6.16.0" # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx
+
+patchedDependencies:
+  "@convex-dev/better-auth@0.12.6": patches/@convex-dev__better-auth@0.12.6.patch

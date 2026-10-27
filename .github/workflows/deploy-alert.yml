@@ -1,0 +1,89 @@
+name: Deploy alert
+# Vercel reports every deployment to GitHub as a deployment status. A failed
+# Production deploy opens an issue (GitHub emails the repository's watchers);
+# the next successful one closes it. No secrets, no third-party service.
+#
+# Vercel names the site's environment "Production". The issue carries that
+# name, so a second project building from this repo would get its own, and
+# one going green never closes another's.
+#
+# GitHub also keeps a record of every deployment Vercel reports. Only the live
+# Production one is worth showing, so once a new one is live, every other
+# record goes (Vercel keeps its own deployments, so rollbacks still work), and
+# the one left links to the site instead of Vercel's protected address.
+on:
+  deployment_status:
+permissions:
+  issues: write
+concurrency:
+  group: deploy-alert
+  cancel-in-progress: false
+jobs:
+  failed:
+    if: >-
+      startsWith(github.event.deployment.environment, 'Production') &&
+      (github.event.deployment_status.state == 'failure' ||
+      github.event.deployment_status.state == 'error')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+          STATE: ${{ github.event.deployment_status.state }}
+          SHA: ${{ github.event.deployment.sha }}
+          LOGS: ${{ github.event.deployment_status.target_url }}
+        run: |
+          title="$ENVIRONMENT deploy failed"
+          body="Vercel reported \`$STATE\` for the $ENVIRONMENT deployment of $SHA. Build logs: $LOGS"
+          open=$(gh issue list --state open --search "deploy failed in:title" --json number,title |
+            jq -r --arg t "$title" 'map(select(.title == $t)) | .[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body
+
+          The last good deployment keeps serving. This issue closes itself when a $ENVIRONMENT deploy succeeds."
+          fi
+  recovered:
+    if: >-
+      startsWith(github.event.deployment.environment, 'Production') &&
+      github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ENVIRONMENT: ${{ github.event.deployment.environment }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          title="$ENVIRONMENT deploy failed"
+          for n in $(gh issue list --state open --search "deploy failed in:title" --json number,title |
+            jq -r --arg t "$title" '.[] | select(.title == $t) | .number'); do
+            gh issue close "$n" --comment "$ENVIRONMENT deployed $SHA successfully."
+          done
+  latest-only:
+    if: >-
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      deployments: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          KEEP: ${{ github.event.deployment.id }}
+          LOGS: ${{ github.event.deployment_status.log_url || github.event.deployment_status.target_url }}
+        run: |
+          gh api -X POST "repos/$GH_REPO/deployments/$KEEP/statuses" -f state=success \
+            -f environment_url=https://librocat.com -f log_url="$LOGS" >/dev/null
+          for id in $(gh api --paginate "repos/$GH_REPO/deployments?per_page=100" --jq '.[].id'); do
+            [ "$id" = "$KEEP" ] && continue
+            # Only an inactive deployment can be deleted.
+            gh api -X POST "repos/$GH_REPO/deployments/$id/statuses" -f state=inactive >/dev/null
+            gh api -X DELETE "repos/$GH_REPO/deployments/$id" >/dev/null
+          done

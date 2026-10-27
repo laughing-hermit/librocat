@@ -1,0 +1,109 @@
+# librocat, self-hosted: the site and remote MCP (http://localhost:3000, /mcp)
+# on a self-hosted Convex backend. First run: ./setup.sh (it writes the secrets
+# to .env and starts everything). After that: docker compose up -d. See
+# SELF_HOSTING.md.
+name: librocat
+
+services:
+  convex:
+    image: ghcr.io/get-convex/convex-backend:latest
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    # The site shares this container's network (network_mode below), so its
+    # port is published here too. Keep 3210 and 3211 as they are: browsers
+    # and the site both reach Convex at 127.0.0.1 on these ports. Published
+    # on this machine only; LIBROCAT_BIND=0.0.0.0 opens them to the network.
+    ports:
+      - "${LIBROCAT_BIND:-127.0.0.1}:3210:3210" # Convex: the database and functions
+      - "${LIBROCAT_BIND:-127.0.0.1}:3211:3211" # Convex HTTP actions: sign-in (Better Auth)
+      - "${LIBROCAT_BIND:-127.0.0.1}:${LIBROCAT_PORT:-3000}:3000" # the librocat site and /mcp
+    volumes:
+      - convex-data:/convex/data
+    environment:
+      INSTANCE_NAME: librocat
+      INSTANCE_SECRET: ${CONVEX_INSTANCE_SECRET:?run ./setup.sh first}
+      # Where browsers reach Convex. Behind a domain, your public URLs (they
+      # are also built into the site, below).
+      CONVEX_CLOUD_ORIGIN: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+      CONVEX_SITE_ORIGIN: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+      DISABLE_BEACON: "true"
+      DOCUMENT_RETENTION_DELAY: "172800"
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 5s
+      start_period: 10s
+    restart: unless-stopped
+
+  # One-shot: pushes the functions and their settings, then exits.
+  deploy:
+    build:
+      context: ..
+      dockerfile: self-host/Dockerfile
+      args:
+        NEXT_PUBLIC_CONVEX_URL: ${CONVEX_CLOUD_ORIGIN:-http://127.0.0.1:3210}
+        NEXT_PUBLIC_CONVEX_SITE_URL: ${CONVEX_SITE_ORIGIN:-http://127.0.0.1:3211}
+        NEXT_PUBLIC_LIBROCAT_MCP_URL: ${LIBROCAT_SITE_URL:-http://localhost:${LIBROCAT_PORT:-3000}}/mcp
+    image: librocat-self-host
+    network_mode: service:convex
+    depends_on:
+      convex:
+        condition: service_healthy
+    environment:
+      CONVEX_SELF_HOSTED_URL: http://127.0.0.1:3210
+      CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_ADMIN_KEY:?run ./setup.sh first}
+      SITE_URL: ${LIBROCAT_SITE_URL:-http://localhost:${LIBROCAT_PORT:-3000}}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?run ./setup.sh first}
+      AUTH_RESEND_KEY: ${AUTH_RESEND_KEY:-}
+      # The System One model (SELF_HOSTING.md, Models): Jev through the
+      # Vercel AI Gateway or from TypeSafe, an open-source one on a server of
+      # your own (the systemone profile below), or none. Without one, no
+      # model is called, and search works the same: it goes by words.
+      # Nothing writes: your agents do.
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      LIBROCAT_JEV: ${LIBROCAT_JEV:-}
+      LIBROCAT_JEV_URL: ${LIBROCAT_JEV_URL:-}
+      LIBROCAT_JEV_KEY: ${LIBROCAT_JEV_KEY:-}
+      LIBROCAT_EVAL_MODEL: ${LIBROCAT_EVAL_MODEL:-}
+      # 1: the reading list and source watch may fetch pages on private
+      # addresses (your own network). Off by default (SELF_HOSTING.md).
+      LIBROCAT_FETCH_PRIVATE: ${LIBROCAT_FETCH_PRIVATE:-}
+    command: ["sh", "self-host/deploy.sh"]
+    restart: "no"
+
+  web:
+    image: librocat-self-host
+    pull_policy: never # built by the deploy service
+    network_mode: service:convex
+    depends_on:
+      deploy:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Convex's own dashboard (data, logs, env): docker compose --profile admin up -d
+  dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:latest
+    profiles: [admin]
+    ports:
+      - "${LIBROCAT_BIND:-127.0.0.1}:6791:6791"
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: http://127.0.0.1:3210
+    depends_on:
+      convex:
+        condition: service_healthy
+
+  # Optional: an open-source System One model, offline, on the CPU: Von
+  # (Apache-2.0), on TypeSafe's API. `docker compose --profile systemone up
+  # -d --build`; its weights download on the first request. Convex reaches it
+  # at http://systemone:8000/v1 (LIBROCAT_JEV_URL). Check how well it does
+  # librocat's jobs with ./models.sh judge (SELF_HOSTING.md).
+  systemone:
+    build: systemone
+    profiles: [systemone]
+    volumes:
+      - systemone-data:/models
+    restart: unless-stopped
+
+volumes:
+  convex-data:
+  systemone-data:

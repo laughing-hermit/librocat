@@ -23,6 +23,7 @@ test("librocat Cloud lets crawlers read its public pages, and lists them", async
     "https://librocat.com/privacy",
     "https://librocat.com/terms",
     "https://librocat.com/disclaimer",
+    "https://librocat.com/llms.txt",
   ]);
 });
 

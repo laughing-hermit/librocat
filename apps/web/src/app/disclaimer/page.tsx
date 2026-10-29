@@ -20,7 +20,7 @@ const sections = [
   },
   {
     title: "Libro can be wrong",
-    body: "In the hosted library, Libro, the library cat, fills in a description and tags your agent left blank, picking a sentence from the concept and tags from your own vocabulary; reads every file a person adds and flags the concepts it likely changes; and once a week proposes supersessions, retirements, merges, synonyms, and review dates. All of it waits in Needs you. A catalog record is not a judgment: it can be wrong, and Libro can miss a conflict. Nothing in Needs you changes until you or your agent approves it, and every write is a revision, so you can always see and undo what changed.",
+    body: "In the hosted library, Libro, the library cat, fills in a description and tags your agent left blank, picking a sentence from the concept and tags from your own vocabulary; reads every file a person adds and flags the concepts it likely changes; and once a week proposes supersessions, retirements, synonyms, and review dates, and checks the merges your agent drafts. Its proposals wait in Needs you. A catalog record is not a judgment: it can be wrong, and Libro can miss a conflict. Nothing in Needs you changes until you or your agent approves it, and every write is a revision, so you can see and undo what changed, within the history your plan keeps.",
   },
   {
     title: "Not professional advice",

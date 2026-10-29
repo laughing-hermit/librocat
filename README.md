@@ -40,7 +40,7 @@
   slides, pictures, and web pages. Agents find them by their words and
   titles, and cite them.
 - **Yours to keep.** Plain Markdown in Google's
-  [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)
+  [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format)
   that you can export and import anytime. Open source, and free to self-host.
 
 ## Install
@@ -83,7 +83,7 @@ Import move a library between your server and librocat Cloud.
 
 ## Pricing
 
-- **Free**, forever: 1 library of 1,000 concepts, and 200 of Libro's credits
+- **Free**: 1 library of 1,000 concepts, and 200 of Libro's credits
   a month.
 - **Individual**: $12 a month per library ($10 billed yearly): 5,000
   concepts, and 500 credits a month.

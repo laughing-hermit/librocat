@@ -104,7 +104,7 @@ these changes, the code follows it, not the other way around.
 | [skills](https://github.com/vercel-labs/skills) (Vercel Labs) | `npx skills add laughing-hermit/librocat -g`: copies the Agent Skills from this repository into 79 agents' skill folders |
 | [mcp-remote](https://www.npmjs.com/package/mcp-remote) | How an agent that only runs stdio servers reaches librocat's remote MCP, OAuth included |
 | [Open Knowledge Format, the announcement](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing) | Why OKF exists: a shared Markdown library that agents read and update, curated like code |
-| [OKF SPEC](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) | The storage and export format: frontmatter (`type` required), bundles, `index.md` / `log.md`, links, provenance (`generated`, `verified`, `sources`, `stale_after`) |
+| [OKF SPEC](https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md) | The storage and export format: frontmatter (`type` required), bundles, `index.md` / `log.md`, links, provenance (`generated`, `verified`, `sources`, `stale_after`) |
 | [LLM Wiki (Karpathy)](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) | The pattern librocat productizes: an LLM-maintained wiki with ingest, query, and lint. In librocat: agents `ingest` and `search`; the lint is Libro's review shelf and its weeding report, which agents work with `review_shelf`, `propose`, and `decide` |
 
 ### Where librocat lives

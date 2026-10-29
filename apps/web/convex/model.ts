@@ -2470,6 +2470,13 @@ export async function deleteSome(ctx: MutationCtx, ws: Id<"workspaces">, budget 
     .take(budget);
   for (const t of tombstones) await ctx.db.delete(t._id);
   if (tombstones.length === budget) return false;
+  // Libro's readings of the files (fileCatalog.ts), with the concepts they flagged.
+  const readings = await ctx.db
+    .query("fileReads")
+    .withIndex("by_workspace", (q) => q.eq("workspaceId", ws))
+    .take(budget);
+  for (const r of readings) await ctx.db.delete(r._id);
+  if (readings.length === budget) return false;
   // Kept sources: their parts (and the pictures converted for them), then the
   // sources and their files.
   const parts = await ctx.db

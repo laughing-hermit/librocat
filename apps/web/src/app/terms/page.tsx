@@ -18,19 +18,19 @@ const sections = [
   },
   {
     title: "Your account",
-    body: `You need an account to use Cloud. You must be at least 16, and old enough to enter a contract where you live. Use a real email address, keep your password and sign-in codes secret, and tell us at ${site.contact} if someone else got in. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page when you no longer trust it.`,
+    body: `You need an account to use Cloud. You must be at least 16, and old enough to enter a contract where you live. You may not use Cloud from a country under US embargo, or if you are on a US sanctions list. Use a real email address, keep your password and sign-in codes secret, and tell us at ${site.contact} if someone else got in. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page when you no longer trust it.`,
   },
   {
     title: "Plans and limits",
-    body: "Every account starts on the Free plan. Each plan's limits (concepts, storage, descriptions and tags filled a month, people, and the monthly ceilings on calls, writes, and file transfer) are on the pricing at librocat.com/#pricing, and the product enforces them. We may change the Free plan's limits, with notice by email. When a paid plan ends, the library returns to Free: nothing is deleted, but new concepts and sources wait until the library is back under the Free limits. There is no trial of the paid plans.",
+    body: "Every account starts on the Free plan. Each plan's limits (concepts, storage, Libro's credits, people, and the monthly ceilings on calls, writes, and file transfer) are on librocat.com (the pricing and its FAQ), and the product enforces them. We may change the Free plan's limits, with notice by email. When a paid plan ends, the library returns to Free: no concept or file is deleted, but new concepts and sources wait until the library is back under the Free limits. There is no trial of the paid plans.",
   },
   {
     title: "Paying",
-    body: "Paid plans are billed monthly or yearly, in US dollars, plus any pay-as-you-go credits you turn on for Libro ($0.01 a credit: a concept cataloged, or about three pages of a file you add, up to the monthly cap you set), billed at the end of each period. Paid plans are sold through Link, Stripe's merchant of record service: Link is the seller on your receipt, charges your payment method, adds sales tax or VAT where it applies, and answers payment questions, and its own terms apply to the payment. Your statement shows LINK.COM* LIBROCAT. A plan renews at the end of each period until you cancel. Cancel anytime in Billing, and the plan runs to the end of the period you paid for.",
+    body: "Paid plans are billed monthly or yearly, in US dollars, plus any pay-as-you-go credits you turn on for Libro ($0.01 a credit: a concept cataloged, or about three pages of a file you add, up to the monthly cap you set), billed at the end of each month. Paid plans are sold through Link, Stripe's merchant of record service: Link is the seller on your receipt, charges your payment method, adds sales tax or VAT where it applies, and answers payment questions, and its own terms apply to the payment. Your statement shows LINK.COM* LIBROCAT. A plan renews at the end of each period until you cancel. Adding seats, or moving to Team, charges the prorated difference at once. Cancel anytime in Billing, and the plan runs to the end of the period you paid for.",
   },
   {
     title: "Refunds and price changes",
-    body: "Payments cover the period you chose, and we do not refund the unused part of a period, except where the law requires it. Where consumer law gives you a right to cancel and get your money back, such as a cooling-off period, Link applies it, and it may refund a payment within 60 days of purchase. If we raise a price, the new price applies from your next renewal, and we tell you by email at least 30 days before.",
+    body: "Payments cover the period you chose, and we do not refund the unused part of a period, except where the law requires it. Where consumer law gives you a right to cancel and get your money back, such as a cooling-off period, Link applies it, and Link may also refund a payment within 60 days of purchase under its own rules. If we raise a price, the new price applies from your next renewal, and we tell you by email at least 30 days before.",
   },
   {
     title: "Team plans",
@@ -38,23 +38,23 @@ const sections = [
   },
   {
     title: "Your content",
-    body: "What you store stays yours. You give us only the rights needed to host, copy, index, catalog, and serve it to you, your team, and the agents you approve, and to back it up. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do.",
+    body: "What you store stays yours. You give us only the rights needed to host, copy, convert, index, catalog, and serve it to you, your team, and the agents you approve, to back it up, and to have the providers the privacy page names process it for that. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do, unless the law forbids it. If something in Cloud infringes your copyright, write to us with the details the law asks for (17 U.S.C. § 512(c)(3)), and we remove it.",
   },
   {
     title: "Acceptable use",
-    body: "Do not use Cloud to break the law or infringe anyone's rights; to store malware, or other people's personal data without a lawful basis; to store secrets such as passwords and private keys (librocat refuses anything that looks like one); to attack, probe, or overload the service or its users; to work around its quotas, for example with many Free accounts; or to resell access to it as your own service. The software is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service.",
+    body: "Do not use Cloud to break the law or infringe anyone's rights; to store malware, or other people's personal data without a lawful basis; to store secrets such as passwords and private keys (librocat refuses keys and tokens in the formats it recognizes); to store payment card numbers, health information covered by HIPAA, or other specially regulated data; to attack, probe, or overload the service or its users; to work around its quotas, for example with many Free accounts; or to resell access to it as your own service. The software is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service.",
   },
   {
     title: "Models and agents",
-    body: "librocat uses Jev, a small judgment model from TypeSafe AI, to catalog concepts and the files you add and to flag what may be duplicated or out of date, as the privacy page describes. Its picks, what it flags or misses, and search results can be wrong. Nothing in Needs you changes until you or your agent approves it, and every write is a revision you can see and undo. Your agents write and act for you, and you are responsible for what they do with what they read. Nothing in librocat is legal, medical, financial, or engineering advice.",
+    body: "librocat uses Jev, a small judgment model from TypeSafe AI, to catalog concepts and the files you add and to flag what may be duplicated or out of date, as the privacy page describes. Its picks, what it flags or misses, and search results can be wrong. Nothing in Needs you changes until you or your agent approves it, and every write is a revision you can see and undo, within the history your plan keeps. Your agents write and act for you, and you are responsible for what they do with what they read. Nothing in librocat is legal, medical, financial, or engineering advice.",
   },
   {
     title: "Availability and changes",
-    body: `We work to keep Cloud available, but we do not promise uptime (${site.status.replace("https://", "")} shows how it runs), and we may change or retire features. We email you about material changes to prices or these terms at least 30 days before they take effect; other changes apply when we post them here, with a new date at the top. If you disagree with a change, cancel and export your library before it takes effect.`,
+    body: `We work to keep Cloud available, but we do not promise uptime (${site.status.replace("https://", "")} shows how it runs), and we may change or retire features. We email you about material changes to prices or these terms at least 30 days before they take effect; other changes apply when we post them here, with a new date at the top. If you disagree with a change, cancel and export your library before it takes effect. If we shut Cloud down, we email you at least 30 days before, so you can export.`,
   },
   {
     title: "Ending",
-    body: "You can delete a library, or your whole account, from the dashboard at any time, and cancel your subscription in Billing. Deleting a library, or the account, ends its plan at once and bills any pay-as-you-go credits used that period. We can suspend or close an account that breaks these terms or does not pay, with notice first unless the breach is serious or the law requires otherwise. Before anything is deleted, Export (in Settings) downloads your whole library. After an account closes, we erase its data as the privacy page describes.",
+    body: "You can delete a library, or your whole account, from the dashboard at any time, and cancel your subscription in Billing. Deleting a library, or the account, ends its plan at once and bills any pay-as-you-go credits used that period. We can suspend or close an account that breaks these terms or does not pay, with notice first unless the breach is serious or the law requires otherwise. Before you delete anything, Export (in Settings) downloads your whole library, its files as the month's file transfer allows. After an account closes, we erase its data as the privacy page describes.",
   },
   {
     title: "Warranty",
@@ -62,19 +62,19 @@ const sections = [
   },
   {
     title: "Liability",
-    body: "To the extent the law allows, we are not liable for indirect, incidental, special, or consequential losses, or for lost profits, revenue, data, or goodwill, including losses from decisions made by you, your team, or your agents. Our total liability for all claims about Cloud is limited to what you paid us in the twelve months before the claim arose, or US$100, whichever is more.",
+    body: "To the extent the law allows, we are not liable for indirect, incidental, special, or consequential losses, or for lost profits, revenue, data, or goodwill, including losses from decisions made by you, your team, or your agents. Our total liability for all claims about Cloud is limited to what you paid for Cloud in the twelve months before the claim arose, or US$100, whichever is more.",
   },
   {
     title: "Indemnity",
-    body: "If you use Cloud for a business, you will defend us against, and cover our losses from, claims by others that arise from your content or from your breaking these terms.",
+    body: "If you use Cloud for a business, you will defend us against, and cover our losses from, claims by others that arise from your content, from what your agents do, or from your breaking these terms.",
   },
   {
     title: "Law and disputes",
-    body: `These terms are governed by the laws of ${site.jurisdiction}, without regard to its conflict-of-law rules. Disputes go to the state or federal courts located in Delaware, and both of us accept their jurisdiction. If you are a consumer, nothing in these terms takes away rights that the law where you live gives you and does not let a contract remove, including the right to go to your local courts.`,
+    body: `If you have a dispute with us, write to us first and give us 30 days to resolve it. These terms are governed by the laws of ${site.jurisdiction}, without regard to its conflict-of-law rules. Disputes go to the state or federal courts located in Delaware, and both of us accept their jurisdiction. If you are a consumer, nothing in these terms takes away rights that the law where you live gives you and does not let a contract remove, including the right to go to your local courts.`,
   },
   {
     title: "General",
-    body: "These terms, with the pricing at librocat.com/#pricing and the privacy page, are the whole agreement about Cloud. If a part cannot be enforced, the rest still applies. Not enforcing a part is not a waiver of it. You may not transfer your account without our consent. We may transfer these terms to whoever takes over the service, and we will tell you if we do.",
+    body: "These terms, with the pricing at librocat.com/#pricing and the privacy page, are the whole agreement about Cloud. If a part cannot be enforced, the rest still applies. Not enforcing a part is not a waiver of it. We are not responsible for failures caused by events beyond our reasonable control, including outages of the providers we rely on. You may not transfer your account without our consent. We may transfer these terms to whoever takes over the service, and we will tell you if we do.",
   },
   {
     title: "Contact",

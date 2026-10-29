@@ -83,16 +83,18 @@ copies this folder, in Antigravity's form.
 **Desktop agents**, the ones that work on your computer, install this plugin
 from the repository, which brings the skills and the MCP together:
 
-- **Claude Desktop** and Cowork: Customize › Plugins › Add marketplace, with
-  `laughing-hermit/librocat`; then install librocat, and connect its
-  connector on the plugin's Connectors tab.
+- **Claude Desktop** and Cowork: Customize › Plugins › Add › Add
+  marketplace, with `laughing-hermit/librocat`; then install librocat, and
+  connect its connector on the plugin's Connectors tab.
 - **ChatGPT**, in its desktop app: a Business or Enterprise admin imports
   `https://github.com/laughing-hermit/librocat` (Admin › Plugins › Add ›
-  Import marketplace); members install librocat from Plugins. A personal
-  plan waits for ChatGPT's plugin directory.
+  Import marketplace); members install librocat from Plugins. Without an
+  admin, add `https://librocat.com/mcp` in the desktop app's Settings › MCP
+  servers › Add server: the MCP without the skills.
 - **Grok Bot** installs Cursor's plugins: a Cursor Teams admin imports the
   repository as a team marketplace (Team Marketplaces › Add Marketplace ›
-  Import from Repo); install librocat from Customize. On your own, Cursor's
+  Import from Repo); each member adds librocat from Connect apps in Grok Bot's
+  sidebar. On your own, Cursor's
   marketplace, once librocat is listed.
 
 ## A self-hosted librocat instead
@@ -109,7 +111,7 @@ npx skills add laughing-hermit/librocat -g
 For Antigravity, copy this folder as above, then set `serverUrl` in its
 `mcp_config.json` to that URL. A desktop agent takes the URL as a custom
 connector or MCP server: the MCP without the skills. With several
-libraries, the agent asks which one when it signs in; a `?library=` URL
-(quoted, in zsh) pins one instead.
+libraries, you pick one in your browser when the agent signs in; a
+`?library=` URL (quoted, in zsh) pins one instead.
 
 The skills work the same with either.

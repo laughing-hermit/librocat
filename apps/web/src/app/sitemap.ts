@@ -18,5 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/privacy`, lastModified: legal, changeFrequency: "monthly", priority: 0.3 },
     { url: `${BASE}/terms`, lastModified: legal, changeFrequency: "monthly", priority: 0.3 },
     { url: `${BASE}/disclaimer`, lastModified: legal, changeFrequency: "monthly", priority: 0.3 },
+    // What agents read about librocat (public/llms.txt).
+    { url: `${BASE}/llms.txt`, changeFrequency: "monthly", priority: 0.5 },
   ];
 }

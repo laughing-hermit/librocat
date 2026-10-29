@@ -330,7 +330,7 @@ how). Libro is the same on every plan, and self-hosted:
     For the rest, one Jev request with four yes/no questions each, a
     schedule (30 days), a price (90), a version (90), an owner (182); the
     soonest kind at 80% or more sets the date. The *Review date* proposal
-    says why ("States a price (Jev, 92% sure). Check it again by Jan 19,
+    says why ("States a price (Libro is 92% sure). Check it again by Jan 19,
     2027?"): set it, change the date first, or dismiss it.
   - **Synonyms by meaning** (`libro.synonymsScreen`): the mechanical pass
     folds spellings of one tag; this finds tags that mean one thing under
@@ -357,8 +357,8 @@ how). Libro is the same on every plan, and self-hosted:
   and supersedes the subject, and closes a screen's supersede of the same
   pair. A merge draft is agent-written, so Jev checks it against its two
   source concepts (`libro.checkDraft`) and the shelf shows the result:
-  "Jev: 95% supported by its sources", or a warning to read both first when
-  it is under 80 %.
+  "The draft matches its sources (95%).", or a warning to read both first
+  when it is under 80 %.
 
 ## The reference desk and Libro's report
 
@@ -511,12 +511,14 @@ exception is kept sources, files and text together (docs/mcp-tools.md,
 Team (`SOURCE_BYTES` in `convex/model.ts`), one file up to 50 MB on Free and
 200 MB on paid plans (`MAX_FILE_BYTES`). A self-hosted librocat has no cap.
 Storage costs little (Convex Pro: 100 GB included, then $0.03 a GB a
-month); Jev's cataloging is what costs, and index credits meter it: a credit
+month); Jev's cataloging and file reading are what cost, and Libro's credits
+meter them: a credit
 costs librocat about $0.0001 to $0.0003, so a Free library's 200 credits
 come to at most about $0.06 of model time a month.
 
 - Free: every new account, one library each. 1 user, 1,000 concepts,
-  descriptions and tags for 200 concepts a month, Libro's review shelf (reviewed when something was
+  200 of Libro's credits a month (a concept cataloged, or about three pages
+  of a file you add; files use at most half), Libro's review shelf (reviewed when something was
   written), and Libro's report emailed on the month's first Monday. No
   pay-as-you-go. No card.
 - **Every plan has a ceiling on everything that costs**, so no library can
@@ -535,7 +537,7 @@ come to at most about $0.06 of model time a month.
   | Files and kept text (`SOURCE_BYTES`) | 100 MB | 5 GB | 25 GB |
   | …of which text (`TEXT_BYTES`) | 10 MB | 250 MB | 1 GB |
   | Largest file (`MAX_FILE_BYTES`) | 50 MB | 200 MB | 200 MB |
-  | Index credits a month (`INDEX_CREDITS`) | 200 | 500, then pay-as-you-go to its cap | 2,500, then pay-as-you-go to its cap |
+  | Libro's credits a month (`INDEX_CREDITS`) | 200 | 500, then pay-as-you-go to its cap | 2,500, then pay-as-you-go to its cap |
   | Calls a month, each counted by what it reads (`CALLS_PER_MONTH`) | 10,000 | 30,000 | 30,000 a person |
   | Writes a month (`WRITES_PER_MONTH`) | 1,500 | 5,000 | 5,000 a person |
   | File transfer a month, downloaded or attached (`TRANSFER_BYTES_PER_MONTH`) | 1 GB | 10 GB | 50 GB |
@@ -609,10 +611,10 @@ come to at most about $0.06 of model time a month.
     set: a gateway key with its own monthly budget, so all free traffic
     together has a hard ceiling and never spends the paid plans' key.
 - Individual ($12/mo, or $10/mo billed yearly): 1 user, 5,000 concepts,
-  descriptions and tags for 500 concepts a month, then pay as you go; the reading list, source watch, and
+  500 of Libro's credits a month, then pay as you go; the reading list, source watch, and
   Libro's review and report every week.
 - Team ($15 per person a month, or $12.50 billed yearly; three people or
-  more): 15,000 concepts, descriptions and tags for 2,500 concepts a
+  more): 15,000 concepts, 2,500 of Libro's credits a
   month, then pay as you go; the
   same, shared by the team. Each person signs in with their own account and joins
   through an invite link (Settings › Team). The subscription's quantity is the

@@ -12,7 +12,8 @@ export const site = {
   repo: "https://github.com/laughing-hermit/librocat",
   // GitHub Releases is the public changelog; a page here would only copy it.
   changelog: "https://github.com/laughing-hermit/librocat/releases",
-  // Upptime in github.com/laughing-hermit/librocat-status: checks / and /mcp every 5 minutes.
+  // Upptime in github.com/laughing-hermit/librocat-status: checks / and /mcp as
+  // often as GitHub's free scheduler runs it, usually every few hours.
   status: "https://status.librocat.com",
   contact: "support@librocat.com",
   // The legal entity that operates librocat and appears on Terms, Privacy,
@@ -21,7 +22,7 @@ export const site = {
   jurisdiction: "the State of Delaware, USA",
   // The date at the top of Terms, Privacy, Security, and Disclaimer. Change it
   // whenever one of them changes.
-  legalUpdated: "October 25, 2026",
+  legalUpdated: "October 29, 2026",
   productLine: "librocat is a Laughing Hermit, Inc. product.",
   // The one-line footer/disclaimer truth: what this is at its core.
   atItsCore:
@@ -281,7 +282,7 @@ export const plans: Plan[] = [
     id: "free",
     name: "Free",
     price: "$0",
-    cadence: "free forever",
+    cadence: "no card needed",
     best: "Try it on your own.",
     features: [
       "1 person, 1 library",
@@ -304,7 +305,7 @@ export const plans: Plan[] = [
       "1 person, 1 library",
       "5,000 concepts",
       "5 GB of documents and pictures, 200 MB a file",
-      "Save a link, and watch on the pages you cite",
+      "Save a link, and watch the pages you cite",
       "500 of Libro's credits a month, then $0.01 each if you turn it on",
     ],
     cta: "Start Individual",
@@ -321,7 +322,7 @@ export const plans: Plan[] = [
       "Admins, Editors, and Readers: who can change the library",
       "15,000 concepts",
       "25 GB of documents and pictures, 200 MB a file",
-      "Save a link, and watch on the pages you cite",
+      "Save a link, and watch the pages you cite",
       "2,500 of Libro's credits a month, then $0.01 each if you turn it on",
     ],
     cta: "Start Team",

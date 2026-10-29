@@ -58,6 +58,8 @@ const FOOTER_LINKS = [
   { href: "/disclaimer", label: "Disclaimer" },
   { href: site.status, label: "Status" },
   { href: site.changelog, label: "Changelog" },
+  // What agents read about librocat, at the root where they look for it.
+  { href: "/llms.txt", label: "llms.txt" },
   { href: site.repo, label: "GitHub" },
 ];
 

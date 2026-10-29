@@ -233,7 +233,12 @@ export const reserveRead = internalMutation({
   handler: async (ctx, { workspaceId, sourceId }) => {
     const ws = await ctx.db.get(workspaceId);
     const src = await ctx.db.get(sourceId);
-    if (!ws || !src || src.workspaceId !== workspaceId) return { done: true as const };
+    if (!ws || !src || src.workspaceId !== workspaceId) {
+      // Its file or library is gone: the reading goes too, so the daily job stops resuming it.
+      const orphan = await rowOf(ctx, sourceId);
+      if (orphan) await ctx.db.delete(orphan._id);
+      return { done: true as const };
+    }
     if (src.client || src.status === "failed") return { done: true as const };
     let row = await rowOf(ctx, sourceId);
     if (!row) {

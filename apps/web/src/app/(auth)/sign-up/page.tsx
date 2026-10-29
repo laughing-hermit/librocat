@@ -16,7 +16,7 @@ export default async function SignUpPage({ searchParams }: PageProps<"/sign-up">
         <CardDescription>
           {invite
             ? `${invitedLine(invite)} Create your account to join.`
-            : "Free forever for 1,000 concepts. No card needed."}
+            : "Free for up to 1,000 concepts. No card needed."}
         </CardDescription>
       </CardHeader>
       <CardContent>

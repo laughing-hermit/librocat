@@ -1,6 +1,6 @@
 # OKF in librocat
 
-librocat stores knowledge as [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+librocat stores knowledge as [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md)
 (OKF v0.2) files: Markdown with a YAML frontmatter block.
 
 ## A concept

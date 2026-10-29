@@ -116,12 +116,12 @@ const FAQ: { q: string; a: string; table?: boolean }[] = [
   },
   {
     q: "What can I add to it?",
-    a: "Anything your agents write down, plus documents (PDF, Word, spreadsheets, slides, text, and code) and pictures: up to 50 MB a file on Free, 200 MB on paid plans. On a paid plan, save a link: librocat keeps the page, or the file it points to (a PDF, an Office file, a picture). Some sites, like LinkedIn, don't let apps read their pages. Agents find all of it by its words, and a picture by its title. For a recording, keep its transcript.",
+    a: "Anything your agents write down, plus documents (PDF, Word, spreadsheets, slides, text, and code) and pictures: up to 50 MB a file on Free, 200 MB on paid plans. On a paid plan, save a link: librocat keeps the page, or the file it points to, up to 50 MB (a PDF, an Office file, a picture). Some sites, like LinkedIn, don't let apps read their pages. Agents find all of it by its words, and a picture by its title. For a recording, keep its transcript.",
   },
   {
     q: "What are the limits on each plan?",
     table: true,
-    a: "Free: 1,000 concepts, 100 MB of files (10 MB of it text, 50 MB a file), 200 of Libro's credits, 10,000 calls, 1,500 writes, and 1 GB of file transfer a month. Individual: 5,000 concepts, 5 GB of files (250 MB of text, 200 MB a file), 500 credits, then $0.01 each if you turn on pay-as-you-go, up to a monthly cap you set, 30,000 calls, 5,000 writes, and 10 GB of file transfer a month. Team: 15,000 concepts, 25 GB of files (1 GB of text, 200 MB a file), 2,500 credits, then the same, and 30,000 calls and 5,000 writes a month for each person, with 50 GB of file transfer, shared by up to 10 libraries you own, on one bill, where each person is an Admin, an Editor, or a Reader (their agents only read). A credit is a concept Libro catalogs, or about three pages of a file you add; files use at most half. Saving links is on paid plans. Self-hosted librocat has no limits.",
+    a: "Free: 1,000 concepts, 100 MB of files (10 MB of it text, 50 MB a file), 200 of Libro's credits, 10,000 calls, 1,500 writes, and 1 GB of file transfer a month. Individual: 5,000 concepts, 5 GB of files (250 MB of text, 200 MB a file), 500 credits, then $0.01 each if you turn on pay-as-you-go, up to a monthly cap you set, 30,000 calls, 5,000 writes, and 10 GB of file transfer a month. Team: 15,000 concepts, 25 GB of files (1 GB of text, 200 MB a file), 2,500 credits, then the same, and 30,000 calls and 5,000 writes a month for each person, with 50 GB of file transfer a month, shared by up to 10 libraries you own, on one bill, where each person is an Admin, an Editor, or a Reader (their agents only read). A credit is a concept Libro catalogs, or about three pages of a file you add; files use at most half. Saving links is on paid plans. Self-hosted librocat has no limits.",
   },
   {
     q: "Is it open source? Can I host it myself?",
@@ -250,7 +250,7 @@ export default function Home() {
             <p className="mt-3 text-sm text-muted-foreground">
               {comingSoon
                 ? "librocat Cloud opens soon. Self-hosting works today."
-                : "Installs in a minute. No API keys. Free forever up to 1,000 concepts."}
+                : "Installs in a minute. No API keys. Free up to 1,000 concepts."}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
               {comingSoon ? (
@@ -377,7 +377,7 @@ export default function Home() {
             Stop repeating yourself.
           </h2>
           <p className="text-lg text-muted-foreground">
-            Give every agent the same library. Free forever. No card. Set up in a minute.
+            Give every agent the same library. Free to start. No card. Set up in a minute.
           </p>
           {comingSoon ? (
             <ButtonLink size="xl" href={site.repo}>

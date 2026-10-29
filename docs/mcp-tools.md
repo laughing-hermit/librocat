@@ -17,11 +17,11 @@ token (OAuth 2.1) and is stateless. Sixteen tools.
 | `files_changed` | Files changed (after a commit or PR): the concepts whose `sources` name one come up for review | `paths`, `commit?`, `shelf?` |
 | `thesaurus` | Read the tag thesaurus | — |
 | `set_term` | Set one preferred tag's `broader`/`narrower`/`related`/`use_for` and `scope_note`, or drop its entry (`remove: true`) | `tag`, `broader?`, `narrower?`, `related?`, `use_for?`, `scope_note?`, `remove?` |
-| `status` | Counts, the type/tag vocabulary, links, plan, quota, `library.role` (`admin`, `editor`, or `reader`: a reader's agent only reads), and descriptions and tags filled this month (Cloud) or `models` (self-hosted: what runs Jev, or why it's off), `review_shelf` (Libro's open proposals), and `sources` (what's kept, and how much of it is text). Broken links are in `review_shelf`'s `weeding`, unread sources in `get_source` | — |
+| `status` | Counts, the type/tag vocabulary, links, plan, quota, `library.role` (`admin`, `editor`, or `reader`: a reader's agent only reads), and Libro's credits this month (`index_credits`, Cloud) or `models` (self-hosted: what runs Libro's model, or why it's off), `review_shelf` (Libro's open proposals), and `sources` (what's kept, and how much of it is text). Broken links are in `review_shelf`'s `weeding`, unread sources in `get_source` | — |
 | `add_source` | Keep a source: a file (two steps: `file` returns an upload URL, then `storage_id` attaches the upload), or the exact text of a document, page, or transcript; the same file or text again returns the kept copy, and new text for a kept URL (or `id`) replaces it and puts the concepts citing it up for review | `title?`, `text?`, `location?`, `kind?`, `id?`, `file?`, `storage_id?`, `filename?` |
 | `get_source` | Read a kept source: the list (unread first), passages for a `query`, or one source's parts; a file comes with a link that lasts an hour or two (`download_url`, or `download_parts` past 16 MB), its parts say what they are, and a picture comes back as an image | `ref?`, `query?`, `part?`, `parts?`, `limit?`, `cursor?` |
-| `review_shelf` | Libro's review shelf: the open proposals, oldest first, with each one's reason, author, and a merge's draft and Jev's `support`; and `weeding`, the CREW/MUSTIE report: deprecated, broken links, orphans, blank records, `stale` (past `stale_after`), and circulation (never retrieved in `days` days, most retrieved). With no `kind`, also `missing`: this week's questions no concept answered and the files no concept cites yet, for the agent to fill (a question leaves once a search for it finds something; a file, once a concept cites it) | `kind?`, `limit?`, `days?` |
-| `propose` | File a proposal for the person to decide: a `merge` with the agent's draft of the target (Jev checks it), `supersede`, `deprecate`, or `synonym` | `kind`, `subject`, `target?`, `reason`, `draft?` |
+| `review_shelf` | Libro's review shelf: the open proposals, oldest first, with each one's reason, author, and a merge's draft and Libro's `support`; and `weeding`, the CREW/MUSTIE report: deprecated, broken links, orphans, blank records, `stale` (past `stale_after`), and circulation (never retrieved in `days` days, most retrieved). With no `kind`, also `missing`: this week's questions no concept answered and the files no concept cites yet, for the agent to fill (a question leaves once a search for it finds something; a file, once a concept cites it) | `kind?`, `limit?`, `days?` |
+| `propose` | File a proposal for the person to decide: a `merge` with the agent's draft of the target (Libro checks it), `supersede`, `deprecate`, or `synonym` | `kind`, `subject`, `target?`, `reason`, `draft?` |
 | `decide` | Carry out the person's decision on a proposal: `approve` (applied as a revision), `dismiss`, or `verify` (a concept past its review date still holds). Approving a `date` proposal may carry the review date the person picked instead | `id`, `decision`, `date?` |
 
 The descriptions an agent reads are short on purpose: the tool list is in
@@ -54,17 +54,17 @@ with no revision to restore it from; every concept write keeps a revision.
 Libro, librocat's librarian, checks the whole library. It fills in a
 description and tags an agent left out (automatic indexation, below), and
 proposes everything else: the mechanical review (same titles, retired
-concepts still marked stable, two spellings of a tag) and, with Jev, its
+concepts still marked stable, two spellings of a tag) and, with its model, its
 screens (pairs that say the same thing, review dates). What it finds goes on
 the review shelf, and nothing there changes until the person approves it.
 The writing is the person's agent's, with the model it already uses:
 
-- `review_shelf` lists what is open. A `supersede` Jev found says so in its
+- `review_shelf` lists what is open. A `supersede` Libro found says so in its
   `reason`: read both concepts with `get_concept`, and when the older one
   says something the newer one lacks, `propose` a `merge` instead, with a
   `draft` of the target that keeps every fact and link from both and
   invents nothing.
-- Jev checks every merge draft against its two concepts; `support` is its
+- Libro checks every merge draft against its two concepts; `support` is its
   probability that the draft says only what they say (under 0.8: read both
   again).
 - `decide` only on the person's say-so: show them what it changes first.
@@ -148,9 +148,9 @@ someone else's laptop.
   unread: `get_source` lists those first, and Libro's report names them.
 - **Source watch** (paid plans). Libro's weekly review fetches again the kept
   pages concepts cite (up to 50 a review, each at most once a week). A page
-  whose text changed replaces its copy, and Jev reads what changed against
+  whose text changed replaces its copy, and Libro reads what changed against
   each citing concept's title and description: the ones it judges affected
-  come up for review, with a proposal on the shelf naming the page. When Jev
+  come up for review, with a proposal on the shelf naming the page. When Libro's model
   can't be asked, every citing concept comes up.
 - **What librocat fetches.** Only those two, and only public http(s) pages
   (`convex/fetchGuard.ts`): never a private or link-local address, checked
@@ -227,7 +227,7 @@ someone else's laptop.
   be outdated. `review_shelf`'s `weeding` lists them under `stale`, and Libro puts each
   on the review shelf. The library also suggests dates: after each review, Libro
   reads what changed and proposes a review date, the day after a date a
-  concept writes out, or as Jev finds it states a schedule, a price, a
+  concept writes out, or as Libro finds it states a schedule, a price, a
   version, or an owner. `decide` may set another date. `update` with `verify: true`
   records an OKF `verified` event (who checked, when) and moves a date that
   has passed 90 days ahead, unless you give a new `stale_after`.
@@ -287,8 +287,8 @@ someone else's laptop.
   weeding — and reports `indexed_at` when automatic indexation filled the
   record.
 - **Automatic indexation.** An `ingest`/`update` that leaves a concept
-  without a description or tags schedules the cataloger (Jev), which counts
-  as one concept's description and tags on librocat Cloud (see [pricing](https://librocat.com/#pricing))
+  without a description or tags schedules the cataloger (Libro), which spends
+  one of Libro's credits on librocat Cloud (see [pricing](https://librocat.com/#pricing))
   when it fills something, and gives it back when it can pick nothing: that
   field stays blank for the agent to write.
 - **Errors** come back as a JSON `{"error": "..."}` tool result, never a crash.

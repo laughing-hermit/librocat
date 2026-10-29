@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   return new Response(
     page(
       "Stop Libro's report?",
-      `You will not get Libro's weekly email anymore. Turn it back on anytime in Account (the menu under your email).</p><form method="post" action="/api/unsubscribe${escapeHtml(search)}"><input type="hidden" name="confirm" value="1"><button type="submit" style="font:inherit;padding:.5rem 1rem;border-radius:.5rem;border:1px solid #1F744F;background:#1F744F;color:#fff;cursor:pointer">Stop the report</button></form><p>`,
+      `You will not get Libro's report anymore. Turn it back on anytime in Account (the menu under your email).</p><form method="post" action="/api/unsubscribe${escapeHtml(search)}"><input type="hidden" name="confirm" value="1"><button type="submit" style="font:inherit;padding:.5rem 1rem;border-radius:.5rem;border:1px solid #1F744F;background:#1F744F;color:#fff;cursor:pointer">Stop the report</button></form><p>`,
     ),
     { headers: { "content-type": "text/html; charset=utf-8" } },
   );

@@ -431,9 +431,8 @@ run(
   "Jev reads a file a person attaches: a description from its own words, and the concept it changes comes up",
   async () => {
     const client = new ConvexHttpClient(url as string);
-    const { token } = runDev("dev:issueTestAccessToken", {
-      email: `files-jev-${Date.now()}@example.com`,
-    });
+    const email = `files-jev-${Date.now()}@example.com`;
+    const { token, userId } = runDev("dev:issueTestAccessToken", { email });
     client.setAuth(token);
     // A concept the file will contradict.
     await client.mutation(api.mcp.ingest, {
@@ -518,6 +517,18 @@ run(
     };
     expect(read.description).toBeUndefined();
     expect((await status())?.used).toBe(half);
+
+    // Its waiting reading goes with the library's contents (model.ts
+    // deleteSome): emptying the library leaves nothing of the file behind.
+    const readings = () =>
+      (runDev("dev:identityRows", { userId, email, workspaceId }) as { fileReads: number })
+        .fileReads;
+    expect(readings()).toBeGreaterThan(0);
+    const admin = new ConvexHttpClient(url as string);
+    admin.setAuth(runDev("dev:issueTestAccessToken", { email, person: true }).token);
+    await admin.mutation(api.concepts.deleteAll, {});
+    for (let i = 0; i < 40 && readings() > 0; i++) await sleep(250);
+    expect(readings()).toBe(0);
   },
   60_000,
 );

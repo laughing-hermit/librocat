@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <SitePage
       title="Nothing here"
-      lede="This address isn't a page on librocat.com. It may have moved, or it was mistyped."
+      lede="This address isn't a page here. It may have moved, or it was mistyped."
     >
       <div className="flex flex-wrap gap-3">
         <ButtonLink href="/">Go to the home page</ButtonLink>

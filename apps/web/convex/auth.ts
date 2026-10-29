@@ -131,8 +131,10 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) =>
     database: authComponent.adapter(ctx),
     // The JWT plugin's own session-to-JWT endpoint: not used (the Convex
     // plugin mints the dashboard's token), and easy to confuse with the
-    // OAuth token endpoint, /oauth2/token.
-    disabledPaths: ["/token"],
+    // OAuth token endpoint, /oauth2/token. And sign-in with an emailed code
+    // alone: the dashboard signs in with a password, and the code only
+    // verifies the address (the security page says so).
+    disabledPaths: ["/token", "/sign-in/email-otp"],
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

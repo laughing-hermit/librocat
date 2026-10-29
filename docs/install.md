@@ -109,8 +109,8 @@ bunx skills add laughing-hermit/librocat -g
 config, and [skills](https://github.com/vercel-labs/skills) copies the three
 skills from this repository. Without `-g`, both write the project's config
 instead, to commit for your team. `-a <agent>` picks the agents, and `-y`
-skips the questions. With several libraries, your agent asks which one
-when it signs in. For a self-hosted librocat, use its address instead of
+skips the questions. With several libraries, you pick one in your browser
+when the agent signs in. For a self-hosted librocat, use its address instead of
 `https://librocat.com/mcp`.
 
 To add one agent at a time, add the server, then the skills with
@@ -178,8 +178,8 @@ repository's `plugin/` folder:
 npx giget gh:laughing-hermit/librocat/plugin ~/.gemini/config/plugins/librocat --force
 ```
 
-For a second library or a self-hosted librocat, then set `serverUrl` in that
-folder's `mcp_config.json` to its address.
+For a second library alongside the first, or a self-hosted librocat, then
+set `serverUrl` in that folder's `mcp_config.json` to its address.
 
 </details>
 
@@ -223,20 +223,21 @@ An agent that only runs local (stdio) servers reaches it through
 The agents that work on your computer. Each installs librocat's plugin from
 this repository, which brings the skills and the MCP together.
 
-- **Claude Desktop** and Cowork: Customize › Plugins › Add marketplace, with
-  `laughing-hermit/librocat`. Then install librocat from it, and connect its
-  librocat connector on the plugin's Connectors tab.
+- **Claude Desktop** and Cowork: Customize › Plugins › Add › Add
+  marketplace, with `laughing-hermit/librocat`. Then install librocat from
+  it, and connect its librocat connector on the plugin's Connectors tab.
 - **ChatGPT**, in its desktop app: a Business or Enterprise admin opens Admin
   › Plugins › Add › Import marketplace, with
   `https://github.com/laughing-hermit/librocat`. Then members install librocat
-  from Plugins, or the admin sets it to Installed. On a personal plan,
-  ChatGPT's plugin directory will have it once librocat is listed.
+  from Plugins, or the admin sets it to Installed. Without an admin, add
+  `https://librocat.com/mcp` in the desktop app's Settings › MCP servers ›
+  Add server: the MCP without the skills.
 - **Grok Bot** installs Cursor's plugins: a Cursor Teams admin opens Dashboard
   › Plugins & MCPs › Team Marketplaces › Add Marketplace › Import from Repo,
-  with `https://github.com/laughing-hermit/librocat`. Then install librocat
-  from Customize, or the admin makes it Required. On your own, Cursor's
+  with `https://github.com/laughing-hermit/librocat`. Then each member adds
+  librocat from Connect apps in Grok Bot's sidebar. On your own, Cursor's
   marketplace will have it once librocat is listed.
 
-For a second library or a self-hosted librocat, which the plugin can't reach,
-add its address as the agent's custom connector or MCP server instead: the MCP
+For a second library alongside the first, or a self-hosted librocat, add its
+address as the agent's custom connector or MCP server instead: the MCP
 without the skills.

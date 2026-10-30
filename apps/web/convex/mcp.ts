@@ -28,6 +28,7 @@ import {
   bySlug,
   canWrite,
   defaultPaused,
+  LIBRARY_PAUSED,
   librariesOf,
   libraryBySlug,
   PAUSED,
@@ -133,13 +134,15 @@ async function requireMember(
 ): Promise<{ ws: Doc<"workspaces">; caller: Caller }> {
   const caller = await requireIdentity(ctx);
   const { userId, clientId } = caller;
-  if (slug) return { ws: await namedLibrary(ctx, userId, slug), caller };
-  const ws =
-    (await pickedLibrary(ctx, userId, clientId)) ??
-    (await unpicked(ctx, userId, () => workspaceForUserId(ctx, userId)));
+  const ws = slug
+    ? await namedLibrary(ctx, userId, slug)
+    : ((await pickedLibrary(ctx, userId, clientId)) ??
+      (await unpicked(ctx, userId, () => workspaceForUserId(ctx, userId))));
   // A consent on /consent creates the workspace; this covers a user whose
   // workspace was deleted after the agent was approved.
   if (!ws) throw new ConvexError("no workspace yet: open https://librocat.com/dashboard once");
+  // Past its owner's one Free library (grace.ts): no agent reaches it.
+  if (ws.pausedAt !== undefined) throw new ConvexError(LIBRARY_PAUSED);
   return { ws, caller };
 }
 

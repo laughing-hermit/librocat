@@ -22,7 +22,7 @@ const sections = [
   },
   {
     title: "Plans and limits",
-    body: "Every account starts on the Free plan. Each plan's limits (concepts, storage, Libro's credits, people, and the monthly ceilings on calls, writes, and file transfer) are on librocat.com (the pricing and its FAQ), and the product enforces them. We may change the Free plan's limits, with notice by email. When a paid plan ends, the library returns to Free: no concept or file is deleted, but new concepts and sources wait until the library is back under the Free limits. If a library stays over the Free limits for 12 months, we may delete what is over them, after emailing its owner twice, the first time at least 30 days before, each with a link to export the library. There is no trial of the paid plans.",
+    body: "Every account starts on the Free plan. Each plan's limits (concepts, storage, Libro's credits, people, and the monthly ceilings on calls, writes, and file transfer) are on librocat.com (the pricing and its FAQ), and the product enforces them. We may change the Free plan's limits, with notice by email. When a paid plan ends, Individual or Team, its libraries return to Free, and new concepts and sources wait until a library is back under the Free limits. Free has one library: 30 days after the plan ends, your others pause (no agent reaches them, and you can still open, export, or delete them), and the one with the most concepts stays active. A plan for a paused library, or deleting another, brings it back. If 12 months after the plan ends a library is still paused or over the Free limits, what is over them is deleted: the paused libraries, then, in the one that stays, what changed least recently, until it fits. We email you when the plan ends, and 30 and 7 days before anything is deleted, each time with a link to export. Nothing within the limits is deleted, and choosing a paid plan before then keeps everything. There is no trial of the paid plans.",
   },
   {
     title: "Paying",
@@ -34,7 +34,7 @@ const sections = [
   },
   {
     title: "Team plans",
-    body: "A Team plan covers up to 10 libraries its buyer owns, on one bill, for the people it has seats for (three or more, priced per person, each person counted once), each signed in with their own account. The libraries share the plan's limits. Whoever buys it is responsible for who joins through its invite links, and for removing people who leave. Members of a library see each other's email addresses and everything in that library. When the plan ends, its libraries go back to Free, with everything in them kept, and only their owner can use them: the other members are paused until the libraries are on Team again.",
+    body: "A Team plan covers up to 10 libraries its buyer owns, on one bill, for the people it has seats for (three or more, priced per person, each person counted once), each signed in with their own account. The libraries share the plan's limits. Whoever buys it is responsible for who joins through its invite links, and for removing people who leave. Members of a library see each other's email addresses and everything in that library. When the plan ends, its libraries go back to Free, as Plans and limits describes, and only their owner can use them: the other members are paused until the libraries are on Team again.",
   },
   {
     title: "Your content",

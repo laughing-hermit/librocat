@@ -163,6 +163,12 @@ export async function removeIdentity(ctx: MutationCtx, userId: string) {
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
   for (const a of agents) await ctx.db.delete(a._id);
+  // A grace their ended plan started (grace.ts): its steps find none and stop.
+  const graces = await ctx.db
+    .query("graces")
+    .withIndex("by_owner", (q) => q.eq("ownerId", userId))
+    .collect();
+  for (const g of graces) await ctx.db.delete(g._id);
 }
 
 async function deleteAll(

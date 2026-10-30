@@ -436,6 +436,34 @@ export const libraryGone = internalQuery({
   },
 });
 
+/** An owner's grace (grace.ts), or null: for the e2e. */
+export const graceOf = internalQuery({
+  args: { ownerId: v.string() },
+  handler: async (ctx, { ownerId }) =>
+    await ctx.db
+      .query("graces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
+      .unique(),
+});
+
+/** Take an owner's grace to day 30 (`pause`) or month 12 (`expire`) now (grace.ts): for the e2e. */
+export const graceStep = internalMutation({
+  args: { ownerId: v.string(), step: v.union(v.literal("pause"), v.literal("expire")) },
+  handler: async (ctx, { ownerId, step }) => {
+    const row = await ctx.db
+      .query("graces")
+      .withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
+      .unique();
+    if (!row) return;
+    const at = { ownerId, since: row.since };
+    await ctx.scheduler.runAfter(
+      0,
+      step === "pause" ? internal.grace.pause : internal.grace.expire,
+      at,
+    );
+  },
+});
+
 /** Another library for a user, as the dashboard's New library makes it. Returns its slug. */
 export const addLibrary = internalMutation({
   args: { userId: v.string(), name: v.string() },

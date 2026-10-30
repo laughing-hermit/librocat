@@ -521,7 +521,11 @@ export const resumeWaiting = internalMutation({
       const workspaceId = next.workspaceId;
       last = workspaceId;
       const ws = await ctx.db.get(workspaceId);
-      const room = ws ? Math.min(RETRY_PER_LIBRARY, creditsLeft(await payerOf(ctx, ws))) : 0;
+      // A paused library (grace.ts) spends no credits until it's back.
+      const room =
+        ws && ws.pausedAt === undefined
+          ? Math.min(RETRY_PER_LIBRARY, creditsLeft(await payerOf(ctx, ws)))
+          : 0;
       if (room <= 0) continue;
       const rows = await ctx.db
         .query("concepts")

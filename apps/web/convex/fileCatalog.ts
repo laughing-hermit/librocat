@@ -471,6 +471,8 @@ export const resumeWaiting = internalMutation({
       .withIndex("by_waiting", (q) => q.eq("waiting", true))
       .take(500);
     for (const row of waiting) {
+      // A paused library (grace.ts) spends no credits until it's back.
+      if ((await ctx.db.get(row.workspaceId))?.pausedAt !== undefined) continue;
       await ctx.scheduler.runAfter(0, internal.fileCatalog.read, {
         workspaceId: row.workspaceId,
         sourceId: row.sourceId,

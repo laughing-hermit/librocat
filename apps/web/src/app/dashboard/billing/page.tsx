@@ -100,12 +100,15 @@ export default async function BillingPage({
   ]);
   const team = teamRead?.data ?? null;
   const cancelAt = ws.cancelAt ?? null;
-  // A Team's people pause when it ends (convex/membership.ts pausedIn): said before anyone cancels.
+  // What a plan's end does, said before anyone cancels: a Team's people pause
+  // (convex/membership.ts pausedIn), and Free's limits apply (convex/grace.ts).
   const mates = team ? team.seatsUsed - 1 : 0;
-  const pauseNote =
-    mates > 0
-      ? ` ${cancelAt ? "When it ends" : "If it ends"}, ${ws.owner ? (mates === 1 ? "your teammate is" : `your ${mates} teammates are`) : "everyone but its owner is"} paused until it's on Team again: nothing is deleted.`
-      : "";
+  const who = ws.owner
+    ? mates === 1
+      ? "your teammate is"
+      : `your ${mates} teammates are`
+    : "everyone but its owner is";
+  const endNote = ` ${cancelAt ? "When it ends" : "If it ends"}, ${mates > 0 ? `${who} paused until it's on Team again, and ` : ""}Free's limits apply: libraries past its one pause 30 days later, and what's still over them after 12 months is deleted.`;
   // A plan picked on the landing page, carried through sign-up (plan-cards.tsx):
   // offered here, one click from Checkout, to whoever can buy it.
   const wanted = picked.plan === "individual" || picked.plan === "team" ? picked.plan : null;
@@ -220,7 +223,7 @@ export default async function BillingPage({
                   </>
                 )}{" "}
                 To change the plan or its seats, open {ws.billedWith} from the library menu, then
-                its Billing.{pauseNote}
+                its Billing.{endNote}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -242,7 +245,7 @@ export default async function BillingPage({
                   `${PLAN_NAME[plan]}. Your library's admins manage the subscription.`
                 )}
                 {ws.covers.length ? ` It also covers ${ws.covers.join(", ")}.` : ""}
-                {pauseNote}
+                {endNote}
               </CardDescription>
               {admin && (
                 <CardAction>

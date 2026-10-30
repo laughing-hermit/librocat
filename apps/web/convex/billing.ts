@@ -8,6 +8,7 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { authComponent } from "./auth";
 import { sendEmail } from "./email";
+import { resumeRoom, startGrace } from "./grace";
 import { currentWorkspaceForUserId, pausedIn } from "./membership";
 import { indexCreditsOf } from "./model";
 import { payerOf, peopleOfTeamAt, syncCover, teamHomeOf, teamPeople } from "./teamCover";
@@ -170,9 +171,15 @@ export const setStatus = internalMutation({
       ...(args.seats ? { seats: args.seats } : {}),
       // Undefined clears it: renewed again, or already ended.
       cancelAt: active ? args.cancelAt : undefined,
+      // On a plan, a library paused past Free's one is back (grace.ts).
+      ...(active ? { pausedAt: undefined } : {}),
     });
     // A Team's libraries follow it: covered while it lives, Free when it ends.
     await syncCover(ctx, wsId);
+    // A paid plan ended: Free's limits, and what follows (grace.ts). One
+    // began: room on Free, maybe, for a library paused past its one.
+    if (!active && ws.plan !== "free") await startGrace(ctx, ws.ownerId);
+    if (active) await resumeRoom(ctx, ws.ownerId);
   },
 });
 

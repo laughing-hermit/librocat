@@ -4,6 +4,7 @@ import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery, mutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
+import { graceFor, resumeRoom, startGrace } from "./grace";
 import { authUserId, personId } from "./identity";
 import { writesLeft } from "./limits";
 import {
@@ -221,9 +222,13 @@ export const deleteLibrary = mutation({
     // Everyone keeps a library: one who had only this one gets a new one. Its
     // row stays until the teardown ends, so it can't count as its owner's.
     for (const m of members) await ensureWorkspace(ctx, m.userId, undefined, id);
-    // A Team's home going: the libraries it covered go back to Free, kept.
+    // A Team's home going: the libraries it covered go back to Free, kept,
+    // with Free's limits (grace.ts).
     if (isTeamHome(ws)) await ctx.db.patch(id, { plan: "free" });
     await syncCover(ctx, id);
+    if (isTeamHome(ws)) await startGrace(ctx, ws.ownerId);
+    // One Free library fewer: room, maybe, for one paused past Free's one.
+    else await resumeRoom(ctx, ws.ownerId);
     await ctx.scheduler.runAfter(0, internal.account.teardownLibraries, { workspaceIds: [id] });
     return null;
   },
@@ -315,6 +320,9 @@ export const me = query({
         indexCredits: indexCreditsOf(pool.home),
         // The month's writes are used up (limits.ts): agents wait until they refill.
         writesBlocked: ((await writesLeft(ctx, ws))?.left ?? 1) === 0,
+        // A paid plan ended and this library is over Free's limits, or past
+        // its one library: what goes, and when (grace.ts). Its owner's to see.
+        grace: ws.ownerId === userId ? await graceFor(ctx, ws) : null,
       },
     };
   },

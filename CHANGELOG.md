@@ -9,8 +9,13 @@ change a tool argument. A patch version never does.
 
 - When a Team ends, its libraries are its owner's alone: the other members
   are paused, with their roles kept, until the libraries are on Team again.
-  Their agents stop with the reason, and their dashboard says so. Nothing is
-  deleted.
+  Their agents stop with the reason, and their dashboard says so.
+- When a paid plan ends, Individual or Team, Free's limits apply. 30 days
+  on, the libraries past Free's one pause: no agent reaches them, and they
+  can still be opened, exported, or deleted. A plan brings one back. What's
+  still paused or over Free's limits after 12 months is deleted, with
+  emails when the plan ends and 30 and 7 days before. Nothing within
+  Free's limits is.
 
 ## [0.0.0] - 2026-10-27
 

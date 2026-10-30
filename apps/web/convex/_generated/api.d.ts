@@ -30,6 +30,8 @@ import type * as fileCatalog from "../fileCatalog.js";
 import type * as fileProbe from "../fileProbe.js";
 import type * as files from "../files.js";
 import type * as funnel from "../funnel.js";
+import type * as grace from "../grace.js";
+import type * as graceTrim from "../graceTrim.js";
 import type * as http from "../http.js";
 import type * as identity from "../identity.js";
 import type * as importZip from "../importZip.js";
@@ -87,6 +89,8 @@ declare const fullApi: ApiFromModules<{
   fileProbe: typeof fileProbe;
   files: typeof files;
   funnel: typeof funnel;
+  grace: typeof grace;
+  graceTrim: typeof graceTrim;
   http: typeof http;
   identity: typeof identity;
   importZip: typeof importZip;

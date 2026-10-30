@@ -16,9 +16,9 @@ import { peopleOf } from "./people";
 /**
  * Whether someone's place in a library is paused. Only a Team shares a
  * library: on any other plan (its Team ended) only its owner uses it. The
- * membership stays, so choosing Team again brings everyone back with their
- * roles, and nothing in the library is deleted. A self-hosted librocat has
- * no plans.
+ * membership stays (grace.ts never removes it), so choosing Team again
+ * brings everyone back with their roles. A self-hosted librocat has no
+ * plans.
  */
 export const pausedIn = (ws: Doc<"workspaces">, userId: string): boolean =>
   process.env.LIBROCAT_SELF_HOST !== "1" && ws.plan !== "team" && ws.ownerId !== userId;
@@ -26,8 +26,7 @@ export const pausedIn = (ws: Doc<"workspaces">, userId: string): boolean =>
 /** What a paused teammate is told. */
 export const PAUSED =
   "This library is paused for you: it's no longer on Team, so only its owner can use it. " +
-  "Nothing in it was deleted, and its owner can bring you back by choosing Team on its " +
-  "Billing page.";
+  "Its owner can bring you back by choosing Team on its Billing page.";
 
 async function membershipsOf(ctx: QueryCtx, userId: string) {
   return await ctx.db
@@ -248,8 +247,14 @@ export async function roleIn(
   return m.role === "admin" ? "admin" : m.role === "reader" ? "reader" : "editor";
 }
 
-/** Readers (and their agents) read; admins and Editors change the library. */
+/** What anyone who'd use a library paused past its owner's one Free library (grace.ts) is told. */
+export const LIBRARY_PAUSED =
+  "This library is paused: Free has one library, and its owner's other one stays active. " +
+  "Choosing a plan for it on its Billing page brings it back, and so does deleting the other.";
+
+/** Readers (and their agents) read; admins and Editors change the library, unless it's paused. */
 export async function canWrite(ctx: QueryCtx, ws: Doc<"workspaces">, userId: string) {
+  if (ws.pausedAt !== undefined) return false;
   const role = await roleIn(ctx, ws, userId);
   return role === "admin" || role === "editor";
 }
@@ -259,7 +264,8 @@ export const READ_ONLY =
   "You can read this library but not change it: ask one of its admins to make you an " +
   "Editor (Team page).";
 
-/** Refuse a Reader's change, saying how to get one made. */
+/** Refuse a change to a paused library, or a Reader's, saying how to get one made. */
 export async function requireWriter(ctx: QueryCtx, ws: Doc<"workspaces">, userId: string) {
+  if (ws.pausedAt !== undefined) throw new ConvexError(LIBRARY_PAUSED);
   if (!(await canWrite(ctx, ws, userId))) throw new ConvexError(READ_ONLY);
 }

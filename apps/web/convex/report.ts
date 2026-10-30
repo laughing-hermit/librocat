@@ -327,6 +327,8 @@ export const reportAll = internalMutation({
     for (const ws of page.page) {
       if (ws.conceptCount === 0) continue;
       if (!firstMonday && !paidFeatures(ws.plan)) continue;
+      // Paused past its owner's one Free library (grace.ts): no report.
+      if (ws.pausedAt !== undefined) continue;
       // A little apart: Resend takes 10 requests a second, and a library may have several people.
       await ctx.scheduler.runAfter(
         (scheduled - before) * REPORT_SPACING_MS,

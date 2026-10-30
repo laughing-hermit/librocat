@@ -329,6 +329,8 @@ export const reviewAll = internalMutation({
       .query("workspaces")
       .paginate({ numItems: ROUND_PAGE, cursor: cursor ?? null });
     for (const [i, ws] of page.page.entries()) {
+      // Paused past its owner's one Free library (grace.ts): nothing to review for.
+      if (ws.pausedAt !== undefined) continue;
       await ctx.scheduler.runAfter(i * REVIEW_SPACING_MS, internal.libro.reviewOne, {
         workspaceId: ws._id,
       });

@@ -17,8 +17,9 @@
  *   file transfer (poolOf), so one bill's worst case holds however many
  *   libraries it covers.
  * - When the Team ends (or its home is deleted), the libraries it covered
- *   go back to Free, with Free's limits; nothing in them is deleted. One
- *   whose own plan still has paid time gets it back (stripe.ts resync).
+ *   go back to Free, with Free's limits (grace.ts: those past its one
+ *   library pause after 30 days). One whose own plan still has paid time gets it back
+ *   (stripe.ts resync).
  */
 
 import { internal } from "./_generated/api";
@@ -130,6 +131,8 @@ export const coveredFields = (home: Doc<"workspaces">) => ({
   seats: home.seats,
   subscriptionStatus: home.subscriptionStatus,
   cancelAt: home.cancelAt,
+  // On the Team, a library paused past Free's one is back (grace.ts).
+  pausedAt: undefined,
 });
 
 /**
@@ -181,7 +184,7 @@ async function coverCandidates(ctx: QueryCtx, home: Doc<"workspaces">) {
   );
 }
 
-/** A library its Team no longer covers: back to Free, everything in it kept. */
+/** A library its Team no longer covers: back to Free, with Free's limits (grace.ts). */
 async function uncover(ctx: MutationCtx, w: Doc<"workspaces">) {
   await ctx.db.patch(w._id, {
     plan: "free",

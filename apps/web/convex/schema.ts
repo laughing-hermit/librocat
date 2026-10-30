@@ -27,6 +27,10 @@ export default defineSchema({
     // The library whose Team subscription covers this one (convex/teamCover.ts):
     // its plan, seats, and bill are the home's.
     coveredBy: v.optional(v.id("workspaces")),
+    // Paused, on Free, past its owner's one Free library, 30 days after a
+    // paid plan ended (convex/grace.ts): no agent reaches it, and the
+    // dashboard only opens, exports, or deletes it. A plan brings it back.
+    pausedAt: v.optional(v.number()),
     // Index credits (cataloging by Jev), per calendar month (UTC,
     // "YYYY-MM"). `indexUsed` counts included credits spent this period;
     // `indexOverage` counts pay-as-you-go credits beyond them. See
@@ -137,6 +141,15 @@ export default defineSchema({
   })
     .index("by_workspace", ["workspaceId"])
     .index("by_user", ["userId"]),
+
+  // A paid plan of its owner's ended (convex/grace.ts): from `since`, 30 days
+  // for their libraries to come within Free's limits. `keep` is the Free
+  // library that stays when they have more than Free's one.
+  graces: defineTable({
+    ownerId: v.string(),
+    since: v.number(),
+    keep: v.optional(v.id("workspaces")),
+  }).index("by_owner", ["ownerId"]),
 
   // Team invites: one share link per workspace (convex/team.ts). Anyone with
   // the link who signs in joins the workspace, up to the plan's seats; an

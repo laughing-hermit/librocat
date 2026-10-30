@@ -43,7 +43,8 @@ function runDevJson(fn: string, args: Record<string, unknown>): any {
     encoding: "utf8",
   });
   expect(result.status).toBe(0);
-  return JSON.parse(result.stdout);
+  // The CLI prints nothing for a null.
+  return result.stdout.trim() ? JSON.parse(result.stdout) : null;
 }
 
 /** A fresh fixture user, signed in the way an approved agent is. */
@@ -1054,6 +1055,9 @@ run(
     // The Team ends: its libraries go back to Free, with everything in them,
     // and their own month again.
     runDev("billing:setStatus", { workspaceId: home, status: "canceled", plan: "team" });
+    // A Team's end is a paid plan's end too (grace.ts): the libraries past
+    // Free's one pause on day 30, and the oldest of the two biggest stays.
+    expect(runDevJson("dev:graceOf", { ownerId })?.keep).toBe(home);
     ws = await shown();
     expect([ws?.plan, ws?.billedWith, ws?.usage.libraries]).toEqual(["free", null, 1]);
     const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
@@ -1103,4 +1107,137 @@ run(
     expect((await owner.query(api.team.overview, {})).members.some((m) => m.paused)).toBe(false);
   },
   120_000,
+);
+
+run(
+  "a paid plan ends: Free's limits at once, the library past Free's one pauses on day 30, and after a year only what's over goes",
+  async () => {
+    const owner = new ConvexHttpClient(url as string);
+    const { userId: ownerId } = signIn(owner, "grace-owner");
+    const first = await owner.mutation(api.workspaces.ensure, {});
+    // On Individual: three concepts more than Free holds, and a second library.
+    runDev("dev:setPlan", { workspaceId: first, plan: "individual" });
+    for (let start = 0; start < 1_003; start += 100) {
+      runDev("dev:bulkIngest", { workspaceId: first, start, count: Math.min(100, 1_003 - start) });
+    }
+    const second = await person(owner).mutation(api.workspaces.createLibrary, { name: "Second" });
+    await owner.mutation(api.mcp.ingest, {
+      library: second.slug,
+      type: "Note",
+      id: "n/second",
+      title: "In the second",
+    });
+    // The first concept written, changed last: it stays.
+    await owner.mutation(api.mcp.update, { id: "s0/c0", description: "Changed last." });
+
+    // The plan ends, as Stripe's webhook says it: Free's limits, and an email
+    // that says what follows.
+    runDev("billing:setStatus", { workspaceId: first, status: "canceled", plan: "individual" });
+    const grace = runDevJson("dev:graceOf", { ownerId });
+    expect(grace.keep).toBe(first);
+    const email = runDevJson("grace:notice", { ownerId, since: grace.since, kind: "start" });
+    expect(email.subject).toBe("Your paid plan ended: your libraries are on Free");
+    expect(email.text).toContain("Second pauses, since Free has one library and My library");
+    expect(email.text).toContain("My library is 3 concepts over Free's limits");
+    // Each library says what happens to it, and when.
+    const shown = async () => (await owner.query(api.workspaces.me, {}))?.workspace;
+    expect((await shown())?.grace).toMatchObject({
+      extra: true,
+      paused: false,
+      kept: "My library",
+    });
+    await person(owner).mutation(api.workspaces.switchLibrary, { id: first });
+    const banner = (await shown())?.grace;
+    expect(banner).toMatchObject({ extra: false, over: { concepts: 3 } });
+    expect(banner?.pausesAt).toBe(grace.since + 30 * 86_400_000);
+    expect(banner?.deletesAt).toBe(grace.since + 365 * 86_400_000);
+
+    // Day 30, now for the test: Second pauses. No agent reaches it, and
+    // nothing is deleted.
+    runDev("dev:graceStep", { ownerId, step: "pause" });
+    const paused = /This library is paused: Free has one library/;
+    const reached = async () =>
+      owner.mutation(api.mcp.list, { library: second.slug }).then(
+        () => true,
+        () => false,
+      );
+    for (let i = 0; i < 20 && (await reached()); i++) await sleep(250);
+    await expect(owner.mutation(api.mcp.list, { library: second.slug })).rejects.toThrow(paused);
+    await expect(
+      owner.mutation(api.mcp.ingest, {
+        library: second.slug,
+        type: "Note",
+        id: "n/more",
+        title: "More",
+      }),
+    ).rejects.toThrow(paused);
+    expect((await shown())?.conceptCount).toBe(1_003);
+    await owner.mutation(api.mcp.get, { id: "s1/c1" });
+
+    // Month 12, now for the test: Second goes, then in My library the three
+    // concepts changed least recently.
+    runDev("dev:graceStep", { ownerId, step: "expire" });
+    for (let i = 0; i < 80 && (await shown())?.conceptCount !== 1_000; i++) await sleep(500);
+    expect((await shown())?.conceptCount).toBe(1_000);
+    await owner.mutation(api.mcp.get, { id: "s0/c0" });
+    await owner.mutation(api.mcp.get, { id: "s2/c1002" });
+    await expect(owner.mutation(api.mcp.get, { id: "s1/c1" })).rejects.toThrow();
+    for (let i = 0; i < 80 && !runDevJson("dev:libraryGone", { workspaceId: second.id }); i++) {
+      await sleep(500);
+    }
+    expect(runDevJson("dev:libraryGone", { workspaceId: second.id })).toBe(true);
+    const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
+    expect(ids(await person(owner).query(api.workspaces.libraries, {}))).toEqual([first]);
+    expect((await shown())?.grace).toBeNull();
+    expect(runDevJson("dev:graceOf", { ownerId })).toBeNull();
+  },
+  240_000,
+);
+
+run(
+  "a paused library comes back with a plan, or when its owner deletes the other one",
+  async () => {
+    const owner = new ConvexHttpClient(url as string);
+    const { userId: ownerId } = signIn(owner, "grace-back");
+    const first = await owner.mutation(api.workspaces.ensure, {});
+    runDev("dev:setPlan", { workspaceId: first, plan: "individual" });
+    await owner.mutation(api.mcp.ingest, { type: "Note", id: "n/first", title: "In the first" });
+    const second = await person(owner).mutation(api.workspaces.createLibrary, { name: "Second" });
+    const reach = () => owner.mutation(api.mcp.list, { library: second.slug });
+    const waitPaused = async (want: boolean) => {
+      for (let i = 0; i < 20; i++) {
+        const isPaused = await reach().then(
+          () => false,
+          () => true,
+        );
+        if (isPaused === want) return;
+        await sleep(250);
+      }
+    };
+
+    // The plan ends, and on day 30 Second, with fewer concepts, pauses.
+    runDev("billing:setStatus", { workspaceId: first, status: "canceled", plan: "individual" });
+    runDev("dev:graceStep", { ownerId, step: "pause" });
+    await waitPaused(true);
+    await expect(reach()).rejects.toThrow(/This library is paused/);
+    // A plan for it brings it back.
+    runDev("billing:setStatus", { workspaceId: second.id, status: "active", plan: "individual" });
+    expect(await reach()).toEqual([]);
+
+    // Its plan ends too: the 30 days start again, and on day 30 it pauses again.
+    runDev("billing:setStatus", { workspaceId: second.id, status: "canceled", plan: "individual" });
+    runDev("dev:graceStep", { ownerId, step: "pause" });
+    await waitPaused(true);
+    await expect(reach()).rejects.toThrow(/This library is paused/);
+    // Deleting the active one makes room on Free: Second comes back.
+    await person(owner).mutation(api.workspaces.deleteLibrary, { id: first });
+    expect(await reach()).toEqual([]);
+    // Month 12 deletes nothing: one library, within Free's limits.
+    runDev("dev:graceStep", { ownerId, step: "expire" });
+    for (let i = 0; i < 10 && runDevJson("dev:graceOf", { ownerId }); i++) await sleep(500);
+    expect(runDevJson("dev:graceOf", { ownerId })).toBeNull();
+    await sleep(1_000);
+    expect(await reach()).toEqual([]);
+  },
+  60_000,
 );

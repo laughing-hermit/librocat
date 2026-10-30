@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { ButtonLink } from "@/components/button-link";
 import { DashboardBreadcrumb } from "@/components/dashboard-breadcrumb";
 import { LeaveLibraryControl } from "@/components/library-controls";
+import { LocalDate } from "@/components/local-date";
 import { NotOnPage } from "@/components/not-on-page";
 import { UpgradeButton } from "@/components/plan-cards";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -44,10 +45,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {me?.paused.map((l) => (
           <PausedBanner key={l.id} library={l} />
         ))}
+        {!selfHost && me?.workspace?.grace && <GraceBanner workspace={me.workspace} />}
         {!selfHost && me?.workspace && (
           // Billing is where the banner leads: it says the same there.
           <NotOnPage path="/dashboard/billing">
-            <LimitBanner workspace={me.workspace} />
+            {/* A library in a grace is past its limits: the grace's banner says it. */}
+            {!me.workspace.grace && <LimitBanner workspace={me.workspace} />}
             <CreditsBanner workspace={me.workspace} />
           </NotOnPage>
         )}
@@ -70,12 +73,81 @@ function PausedBanner({ library }: { library: Me["paused"][number] }) {
         <AlertTitle>{library.name} is paused for you</AlertTitle>
         <AlertDescription>
           <p>
-            It's no longer on Team, so only its owner can use it. Nothing in it was deleted, and its
-            owner can bring you back by choosing Team on its Billing page.
+            It's no longer on Team, so only its owner can use it. Its owner can bring you back by
+            choosing Team on its Billing page.
           </p>
         </AlertDescription>
         <div className="col-start-2 mt-2">
           <LeaveLibraryControl id={library.id} name={library.name} />
+        </div>
+      </Alert>
+    </div>
+  );
+}
+
+/** What's over Free's limits, in words (convex/grace.ts overWords). */
+function overWords(o: NonNullable<NonNullable<Me["workspace"]>["grace"]>["over"]) {
+  if (!o) return "";
+  return [
+    o.concepts > 0 && `${o.concepts.toLocaleString("en-US")} concepts`,
+    o.bytes > 0 && `${formatBytes(o.bytes)} of documents and pictures`,
+    o.bytes === 0 && o.textBytes > 0 && `${formatBytes(o.textBytes)} of their text`,
+    o.revisions > 0 && `${o.revisions.toLocaleString("en-US")} old revisions`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/**
+ * A paid plan ended, and this library is past its owner's one Free library,
+ * or over Free's limits (convex/grace.ts): every page says what happens on
+ * which day, and how to keep it.
+ */
+function GraceBanner({ workspace: ws }: { workspace: NonNullable<Me["workspace"]> }) {
+  const g = ws.grace;
+  if (!g) return null;
+  const other = g.kept ?? "your other library";
+  return (
+    <div className="pb-6">
+      <Alert variant="destructive">
+        <AlertTriangle />
+        <AlertTitle>
+          {g.extra && g.paused ? (
+            "This library is paused"
+          ) : g.extra ? (
+            <>
+              This library pauses on <LocalDate at={g.pausesAt} />
+            </>
+          ) : (
+            "Over Free's limits"
+          )}
+        </AlertTitle>
+        <AlertDescription>
+          <p>
+            {g.extra ? (
+              <>
+                Free has one library, and {other} has the most concepts.{" "}
+                {g.paused
+                  ? "No agent reaches this one; you can open, export, or delete it."
+                  : "Then no agent reaches this one; you can still open, export, or delete it."}{" "}
+                Choosing a plan for it brings it back, and so does deleting {other}. If it's still
+                paused on <LocalDate at={g.deletesAt} />, it's deleted.
+              </>
+            ) : (
+              <>
+                This library is {overWords(g.over)} over Free's limits: new concepts and files wait
+                until it's under them. If it's still over on <LocalDate at={g.deletesAt} />, what
+                changed least recently is deleted, until it fits. Export it, delete what you don't
+                need, or choose a plan to keep everything.
+              </>
+            )}
+          </p>
+        </AlertDescription>
+        <div className="col-start-2 mt-2 flex flex-wrap gap-2">
+          <UpgradeButton plan={ws.plan} admin={ws.admin} label="Choose a plan" />
+          <ButtonLink href="/dashboard/library" variant="outline" size="sm" prefetch={false}>
+            Export
+          </ButtonLink>
         </div>
       </Alert>
     </div>

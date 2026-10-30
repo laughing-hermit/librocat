@@ -661,7 +661,7 @@ come to at most about $0.06 of model time a month.
     Billing and the "Almost full" banner count the Team's libraries
     together.
   - When the Team ends, or its home is deleted, its libraries go back to
-    Free with everything in them; Free's limits apply again.
+    Free, and Free's limits apply again, as above.
 - Both paid plans check out through Stripe (one price per plan per
   interval: `STRIPE_PRICE_ID_INDIVIDUAL`, `STRIPE_PRICE_ID_TEAM`,
   `STRIPE_PRICE_ID_INDIVIDUAL_ANNUAL`, `STRIPE_PRICE_ID_TEAM_ANNUAL`, plus
@@ -703,8 +703,18 @@ come to at most about $0.06 of model time a month.
   and VAT, and statements read `LINK.COM* LIBROCAT`. It needs the account
   to accept Managed Payments' terms in the Dashboard first, and each
   product a tax code Managed Payments accepts.
-  When a subscription ends, the workspace returns to Free and keeps every
-  concept; new ones wait until it is under the Free limit. Only a Team
+  When a subscription ends, Individual or Team, the workspace returns to
+  Free; new concepts wait until it is under the Free limit. As Supabase
+  does with projects, the rest is a pause, not a deletion
+  (`convex/grace.ts`): 30 days on, the owner's libraries past Free's one
+  pause (`pausedAt`: no agent reaches them, the dashboard opens, exports,
+  or deletes them), the one with the most concepts staying active; a plan,
+  or room on Free, brings one back. 12 months on, what's still paused or
+  over Free's limits goes: the paused libraries, then what changed least
+  recently in the one kept (`convex/graceTrim.ts`, a page at a time). Emails
+  go when the plan ends and 30 and 7 days before the deletion; a banner on
+  each library concerned says the dates. Libro's reviews, reports, and
+  waiting cataloging skip a paused library. Only a Team
   shares a library: on any other plan its other members are paused
   (`convex/membership.ts` `pausedIn`), their memberships and roles kept, so
   the plan's return brings them back. Their agents stop with the reason, and

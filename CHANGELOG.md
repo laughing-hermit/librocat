@@ -23,7 +23,8 @@ agents, managed by Libro, an AI librarian.
   `npx skills add laughing-hermit/librocat -g`
   ([docs/install.md](./docs/install.md)).
 - Libro catalogs what an agent leaves blank, reads the files a person adds,
-  and proposes reviews, merges, and retirements for a person to approve.
+  proposes reviews and retirements for a person to approve, and checks the
+  merges an agent drafts.
 - Search goes by words, through the library's thesaurus; your agent writes
   the searches.
 - The Agent Plugin carries no version, so agents pick up every commit to

@@ -1,7 +1,8 @@
 /**
  * Signed tokens: HMAC-SHA256 keyed by the deployment's BETTER_AUTH_SECRET,
  * each kind domain-separated by the words its message starts with. An
- * email's unsubscribe link (report.ts) and a file link (files.ts) use them.
+ * email's unsubscribe link (report.ts), a file link (files.ts), and a Stripe
+ * meter event's identifier (stripe.ts) use them.
  */
 
 /** Bytes as base64url, unpadded. */

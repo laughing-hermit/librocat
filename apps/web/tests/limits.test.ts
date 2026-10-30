@@ -15,6 +15,11 @@ test("calls, writes, and file transfer a month, by plan; Team's calls and writes
     transferAllowance("individual"),
     transferAllowance("team"),
   ]).toEqual([1e9, 10e9, 50e9]);
+  // A library storing more than its plan's transfer (back on Free from Team)
+  // can still move every file once in 30 days; within its plan, nothing changes.
+  expect(transferAllowance("free", 25e9)).toBe(25e9);
+  expect(transferAllowance("free", 5e7)).toBe(1e9);
+  expect(transferAllowance("team", 25e9)).toBe(50e9);
 });
 
 test("history keeps 100 revisions a concept, and two for each concept a plan allows", () => {

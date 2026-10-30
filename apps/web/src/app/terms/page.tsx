@@ -54,7 +54,7 @@ const sections = [
   },
   {
     title: "Ending",
-    body: "You can delete a library, or your whole account, from the dashboard at any time, and cancel your subscription in Billing. Deleting a library, or the account, ends its plan at once and bills any pay-as-you-go credits used that period. We can suspend or close an account that breaks these terms or does not pay, with notice first unless the breach is serious or the law requires otherwise. Before you delete anything, Export (in Settings) downloads your whole library, its files as the month's file transfer allows. After an account closes, we erase its data as the privacy page describes.",
+    body: "You can delete a library, or your whole account, from the dashboard at any time, and cancel your subscription in Billing. Deleting a library, or the account, ends its plan at once and bills any pay-as-you-go credits used that period. We can suspend or close an account that breaks these terms or does not pay, with notice first unless the breach is serious or the law requires otherwise. Before you delete anything, Export (in Settings) downloads your whole library, every file at least once in any 30 days. After an account closes, we erase its data as the privacy page describes.",
   },
   {
     title: "Warranty",

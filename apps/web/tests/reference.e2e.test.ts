@@ -86,6 +86,8 @@ run(
     const report = runDev("report:reportData", { workspaceId }).report;
     expect(await client.query(api.report.myReportEmail, {})).toBe(true);
     expect(report).toMatchObject({
+      // A Free library: the month since its last report.
+      period: "month",
       added: { count: 1 },
       questions: { asked: 6, unanswered: [{ text: "offsite dinner venue", count: 1 }] },
     });

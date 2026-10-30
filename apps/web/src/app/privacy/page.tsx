@@ -48,7 +48,7 @@ const sections = [
   },
   {
     title: "Your rights",
-    body: `You can see, export, and delete your data yourself: Export, in Settings, downloads your whole library as an OKF zip, with your kept sources and attached files beside it (the files as the month's file transfer allows), that Import, in another librocat's Settings, copies in, hosted or self-hosted; the delete buttons described above erase it. You can also ask us at ${site.contact} to access, correct, delete, or move your personal data, to restrict or object to how we use it, or to withdraw a consent you gave. We answer within 30 days. Depending on where you live (for example the EU, the UK, or California), the law gives you these rights, and you can also complain to your data protection authority.`,
+    body: `You can see, export, and delete your data yourself: Export, in Settings, downloads your whole library as an OKF zip, with your kept sources and attached files beside it (every file at least once in any 30 days), that Import, in another librocat's Settings, copies in, hosted or self-hosted; the delete buttons described above erase it. You can also ask us at ${site.contact} to access, correct, delete, or move your personal data, to restrict or object to how we use it, or to withdraw a consent you gave. We answer within 30 days. Depending on where you live (for example the EU, the UK, or California), the law gives you these rights, and you can also complain to your data protection authority.`,
   },
   {
     title: "Children",

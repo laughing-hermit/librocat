@@ -552,15 +552,26 @@ export async function setTerm(
   return { thesaurus: next };
 }
 
-/** The most concepts one retag changes in a transaction; the rest follow (libro.ts retagMore). */
-export const RETAG_PAGE = 500;
+/**
+ * The most concepts one retag changes in a transaction; the rest follow
+ * (libro.ts retagMore). Each is a revision too: about ten database calls and
+ * up to ~190 KB read per concept at the caps, so 50 stay well under Convex's
+ * 4,096 calls and 16 MiB read a mutation.
+ */
+export const RETAG_PAGE = 50;
 
 /**
  * Retag the concepts carrying `from` to `to` (a synonym folded into its
- * preferred tag), RETAG_PAGE at a time: how many changed, and whether more
- * carry it.
+ * preferred tag), RETAG_PAGE at a time, each change a revision by `by`: how
+ * many changed, and whether more carry it.
  */
-export async function retag(ctx: MutationCtx, ws: Id<"workspaces">, from: string, to: string) {
+export async function retag(
+  ctx: MutationCtx,
+  ws: Id<"workspaces">,
+  from: string,
+  to: string,
+  by: Writer,
+) {
   const filed = await filedUnder(ctx, ws, "tag", from).take(RETAG_PAGE);
   let changed = 0;
   for (const f of filed) {
@@ -576,10 +587,13 @@ export async function retag(ctx: MutationCtx, ws: Id<"workspaces">, from: string
     });
     const b = await bodyOf(ctx, ws, d.cid);
     if (b) await ctx.db.patch(b._id, searchFieldsOf({ ...d, tags, body: b.body }));
+    // A revision, as every write keeps; before filing, since it may name a new author.
+    await recordRevision(ctx, d._id, "update", by);
     await reindexConcept(ctx, ws, d, await ctx.db.get(d._id));
     changed += 1;
   }
-  return { changed, more: filed.length === RETAG_PAGE };
+  // A full page that changed nothing holds only stale rows: stop, rather than reread it forever.
+  return { changed, more: filed.length === RETAG_PAGE && changed > 0 };
 }
 
 /**

@@ -17,7 +17,13 @@ import {
   payAsYouGoOn,
   usedPayAsYouGo,
 } from "../convex/model";
-import { needsMeteredItem, planOf, prorationMoment, teamSwitch } from "../convex/stripe";
+import {
+  meterIdentifier,
+  needsMeteredItem,
+  planOf,
+  prorationMoment,
+  teamSwitch,
+} from "../convex/stripe";
 import { TEAM_LIBRARIES } from "../convex/teamCover";
 import {
   PAYG_CAP_DOLLARS,
@@ -211,5 +217,18 @@ describe("usedPayAsYouGo", () => {
     expect(usedPayAsYouGo({ indexPeriod: "2026-10", indexOverage: 0 }, oct)).toBe(false);
     expect(usedPayAsYouGo({ indexPeriod: "2026-09", indexOverage: 40 }, oct)).toBe(false);
     expect(usedPayAsYouGo({}, oct)).toBe(false);
+  });
+});
+
+describe("pay-as-you-go meter events", () => {
+  test("Stripe gets an opaque identifier: stable for a retry, no concept id or file title", async () => {
+    const id = await meterIdentifier("ws1", "acme/payments/runbook", 100, "s3cret");
+    expect(id).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(id).not.toContain("acme");
+    expect(await meterIdentifier("ws1", "acme/payments/runbook", 100, "s3cret")).toBe(id);
+    expect(await meterIdentifier("ws1", "acme/payments/runbook", 101, "s3cret")).not.toBe(id);
+    expect(await meterIdentifier("ws1", "acme/other", 100, "s3cret")).not.toBe(id);
+    // A long id still fits Stripe's 100 characters.
+    expect((await meterIdentifier("ws1", "x".repeat(500), 100, "s3cret")).length).toBe(43);
   });
 });

@@ -22,7 +22,7 @@ import {
   internalMutation,
   type MutationCtx,
 } from "./_generated/server";
-import { takeTransfer, transferAllowance, transferLeft, waitFor } from "./limits";
+import { takeTransfer, transferLeft, transferOf, waitFor } from "./limits";
 import { hmac, sameToken } from "./signing";
 
 /** The most one link serves: an HTTP action's response is at most 20 MiB. */
@@ -145,7 +145,7 @@ export function linker(ctx: MutationCtx, ws: Doc<"workspaces">): Link & { capped
  * serve, or a file that can't be attached (`retryAfter`, ms, when known).
  */
 export function transferUsed(ws: Doc<"workspaces">, retryAfter?: number): string {
-  const gb = Math.round(transferAllowance(ws.plan) / 1_000_000_000);
+  const gb = Math.round(transferOf(ws) / 1_000_000_000);
   // A Team's libraries share its month (teamCover.ts poolKey).
   const team = ws.plan === "team";
   return (

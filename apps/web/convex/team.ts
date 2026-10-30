@@ -15,6 +15,7 @@ import { authUserId, personId } from "./identity";
 import {
   currentWorkspaceForUserId,
   ensureWorkspace,
+  pausedIn,
   type Role,
   setCurrentLibrary,
   workspaceForUserId,
@@ -92,6 +93,8 @@ export const overview = query({
             : "editor") as Role,
         you: m.userId === userId,
         owner: m.userId === ws.ownerId,
+        // Its Team ended: only its owner uses it until it's on Team again (membership.ts).
+        paused: pausedIn(ws, m.userId),
       };
     });
     const invite = admin

@@ -30,6 +30,7 @@ import { authComponent } from "./auth";
 import { sendEmail } from "./email";
 import { authUserId } from "./identity";
 import { ROUND_PAGE } from "./libro";
+import { pausedIn } from "./membership";
 import { openCount, paidFeatures, type Scan, scanConcepts, scannedNote } from "./model";
 import { questionsSince, summarize } from "./reference";
 import { hmac, sameToken } from "./signing";
@@ -361,7 +362,8 @@ export const reportData = internalQuery({
       .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
       .collect();
     const recipients: { memberId: Id<"members">; email: string }[] = [];
-    for (const m of members.filter(wantsEmail)) {
+    // Not to someone paused in it (membership.ts pausedIn): they can't open it.
+    for (const m of members.filter((m) => wantsEmail(m) && !pausedIn(ws, m.userId))) {
       const user = await authComponent.getAnyUserById(ctx, m.userId);
       if (user?.email) recipients.push({ memberId: m._id, email: user.email });
     }

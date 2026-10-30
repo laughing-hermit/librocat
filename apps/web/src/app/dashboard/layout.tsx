@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/app-header";
 import { ButtonLink } from "@/components/button-link";
 import { DashboardBreadcrumb } from "@/components/dashboard-breadcrumb";
+import { LeaveLibraryControl } from "@/components/library-controls";
 import { NotOnPage } from "@/components/not-on-page";
 import { UpgradeButton } from "@/components/plan-cards";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,6 +41,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         selfHost={selfHost}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pt-6 pb-16">
+        {me?.paused.map((l) => (
+          <PausedBanner key={l.id} library={l} />
+        ))}
         {!selfHost && me?.workspace && (
           // Billing is where the banner leads: it says the same there.
           <NotOnPage path="/dashboard/billing">
@@ -51,6 +55,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </main>
     </>
+  );
+}
+
+/**
+ * A library whose Team ended, that only its owner uses now (convex/membership.ts
+ * pausedIn): every page says so until it's on Team again, or they leave it.
+ */
+function PausedBanner({ library }: { library: Me["paused"][number] }) {
+  return (
+    <div className="pb-6">
+      <Alert>
+        <Info />
+        <AlertTitle>{library.name} is paused for you</AlertTitle>
+        <AlertDescription>
+          <p>
+            It's no longer on Team, so only its owner can use it. Nothing in it was deleted, and its
+            owner can bring you back by choosing Team on its Billing page.
+          </p>
+        </AlertDescription>
+        <div className="col-start-2 mt-2">
+          <LeaveLibraryControl id={library.id} name={library.name} />
+        </div>
+      </Alert>
+    </div>
   );
 }
 

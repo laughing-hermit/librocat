@@ -25,9 +25,13 @@ import { decideProposal, openShelf, proposeOnShelf } from "./libro";
 import { limitCalls, monthlyLeft } from "./limits";
 import {
   belongsTo,
+  bySlug,
   canWrite,
+  defaultPaused,
   librariesOf,
   libraryBySlug,
+  PAUSED,
+  pausedMember,
   requireWriter,
   roleIn,
 } from "./membership";
@@ -68,10 +72,17 @@ async function requireIdentity(ctx: QueryCtx) {
   return { userId: identity.subject, clientId };
 }
 
+/** What an agent in a library its person is paused in (membership.ts pausedIn) is told. */
+const AGENT_PAUSED =
+  `${PAUSED} Meanwhile, to use another library, disconnect this agent on the dashboard's ` +
+  "Connect page, then sign in again to pick one.";
+
 /** The library a slug names, if the user belongs to it; the error says what to check. */
 async function namedLibrary(ctx: QueryCtx, userId: string, slug: string) {
   const ws = await libraryBySlug(ctx, userId, slug);
   if (!ws) {
+    const named = await bySlug(ctx, slug);
+    if (named && (await pausedMember(ctx, userId, named))) throw new ConvexError(AGENT_PAUSED);
     throw new ConvexError(
       `no library "${slug}" that you belong to: check ?library= in this agent's MCP URL, ` +
         "or drop it and pick the library when the agent signs in",
@@ -82,8 +93,9 @@ async function namedLibrary(ctx: QueryCtx, userId: string, slug: string) {
 
 /**
  * The library the agent's person picked for it on /consent, if any. A pick
- * that no longer holds (the library deleted, or they left it) stops the
- * agent rather than moving it: an agent never changes library by itself.
+ * that no longer holds (the library deleted, they left it, or they're paused
+ * in it) stops the agent rather than moving it: an agent never changes
+ * library by itself.
  */
 async function pickedLibrary(ctx: QueryCtx, userId: string, clientId?: string) {
   const pick = clientId ? await pickOf(ctx, userId, clientId) : null;
@@ -92,12 +104,24 @@ async function pickedLibrary(ctx: QueryCtx, userId: string, clientId?: string) {
     ? await ctx.db.get(pick.workspaceId)
     : null;
   if (!ws) {
+    const picked = await ctx.db.get(pick.workspaceId);
+    if (picked && (await pausedMember(ctx, userId, picked))) throw new ConvexError(AGENT_PAUSED);
     throw new ConvexError(
       "this agent's library is gone, or you're no longer in it: disconnect the agent on " +
         "the dashboard's Connect page, then sign in again to pick a library",
     );
   }
   return ws;
+}
+
+/**
+ * An agent with no pick reaches its person's default library (`find`), unless
+ * the first library they joined is paused for them: then it stops, saying
+ * why (membership.ts defaultPaused).
+ */
+async function unpicked<T>(ctx: QueryCtx, userId: string, find: () => Promise<T>): Promise<T> {
+  if (await defaultPaused(ctx, userId)) throw new ConvexError(AGENT_PAUSED);
+  return await find();
 }
 
 /** Who is calling: the person, and their agent (OAuth client) when it's an agent. */
@@ -111,7 +135,8 @@ async function requireMember(
   const { userId, clientId } = caller;
   if (slug) return { ws: await namedLibrary(ctx, userId, slug), caller };
   const ws =
-    (await pickedLibrary(ctx, userId, clientId)) ?? (await workspaceForUserId(ctx, userId));
+    (await pickedLibrary(ctx, userId, clientId)) ??
+    (await unpicked(ctx, userId, () => workspaceForUserId(ctx, userId)));
   // A consent on /consent creates the workspace; this covers a user whose
   // workspace was deleted after the agent was approved.
   if (!ws) throw new ConvexError("no workspace yet: open https://librocat.com/dashboard once");
@@ -179,7 +204,8 @@ async function writerOf(ctx: MutationCtx, slug?: string) {
   const { userId, clientId } = await requireIdentity(ctx);
   const ws = slug
     ? await namedLibrary(ctx, userId, slug)
-    : ((await pickedLibrary(ctx, userId, clientId)) ?? (await ensureWorkspace(ctx, userId)));
+    : ((await pickedLibrary(ctx, userId, clientId)) ??
+      (await unpicked(ctx, userId, () => ensureWorkspace(ctx, userId))));
   // A Reader's agent reads; every change goes through here.
   await requireWriter(ctx, ws, userId);
   const client = clientId ? await noteUse(ctx, userId, clientId, ws._id) : undefined;
@@ -197,7 +223,7 @@ export const whoami = query({
     const ws = slug
       ? await libraryBySlug(ctx, identity.subject, slug)
       : ((await pickedLibrary(ctx, identity.subject, clientId)) ??
-        (await workspaceForUserId(ctx, identity.subject)));
+        (await unpicked(ctx, identity.subject, () => workspaceForUserId(ctx, identity.subject))));
     return ws ? { workspaceId: ws._id, name: ws.name, slug: ws.slug ?? null, plan: ws.plan } : null;
   },
 });
@@ -430,11 +456,11 @@ async function statusFor(ctx: MutationCtx, ws: Doc<"workspaces">, userId: string
     ...(monthly === null ? {} : { monthly }),
     // A reader's agent only reads (membership.ts canWrite).
     library: { name: ws.name, slug: ws.slug ?? null, role: await roleIn(ctx, ws, userId) },
-    libraries: all.map(({ ws: l, member }, i) => ({
+    libraries: all.map(({ ws: l, member, default: first }) => ({
       name: l.name,
       slug: l.slug ?? null,
       role: member.role,
-      ...(i === 0 ? { default: true } : {}),
+      ...(first ? { default: true } : {}),
     })),
   };
 }

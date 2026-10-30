@@ -11,6 +11,7 @@ import {
   currentWorkspaceForUserId,
   ensureWorkspace,
   librariesOf,
+  pausedLibrariesOf,
   requireWriter,
   roleIn,
   setCurrentLibrary,
@@ -54,15 +55,9 @@ export async function requireWritableWorkspace(ctx: QueryCtx): Promise<Doc<"work
   return ws;
 }
 
-/** Whether the user administers the library: its owner, or a member made admin. */
+/** Whether the user administers the library: its owner, or a member made admin who isn't paused. */
 async function isAdmin(ctx: QueryCtx, ws: Doc<"workspaces">, userId: string | null) {
-  if (!userId) return false;
-  if (ws.ownerId === userId) return true;
-  const mine = await ctx.db
-    .query("members")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
-  return mine.some((m) => m.workspaceId === ws._id && m.role === "admin");
+  return userId !== null && (await roleIn(ctx, ws, userId)) === "admin";
 }
 
 /**
@@ -111,7 +106,7 @@ export const libraries = query({
     if (!userId) return [];
     const current = await currentWorkspaceForUserId(ctx, userId);
     const all = await librariesOf(ctx, userId);
-    return all.map(({ ws, member }, i) => ({
+    return all.map(({ ws, member, default: first }) => ({
       id: ws._id,
       name: ws.name,
       slug: ws.slug ?? null,
@@ -120,7 +115,7 @@ export const libraries = query({
       owner: ws.ownerId === userId,
       current: ws._id === current?._id,
       // The plain /mcp URL reaches the first library joined.
-      default: i === 0,
+      default: first,
     }));
   },
 });
@@ -275,8 +270,13 @@ export const me = query({
     const userId = await authUserId(ctx);
     const user = userId ? await authComponent.getAnyUserById(ctx, userId) : null;
     if (!user) return null;
+    // Libraries whose Team ended, that only their owners use now (membership.ts pausedIn).
+    const paused = (await pausedLibrariesOf(ctx, userId as string)).map((w) => ({
+      id: w._id,
+      name: w.name,
+    }));
     const ws = await workspaceFor(ctx);
-    if (!ws) return { email: user.email, name: user.name, workspace: null };
+    if (!ws) return { email: user.email, name: user.name, paused, workspace: null };
     // A Team's libraries share its plan (teamCover.ts): its home holds it,
     // with the credits, and what they use counts together.
     const pool = await poolOf(ctx, ws);
@@ -286,6 +286,7 @@ export const me = query({
     return {
       email: user.email,
       name: user.name,
+      paused,
       workspace: {
         id: ws._id,
         name: ws.name,

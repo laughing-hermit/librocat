@@ -7,6 +7,11 @@ change a tool argument. A patch version never does.
 
 ## [Unreleased]
 
+- When a Team ends, its libraries are its owner's alone: the other members
+  are paused, with their roles kept, until the libraries are on Team again.
+  Their agents stop with the reason, and their dashboard says so. Nothing is
+  deleted.
+
 ## [0.0.0] - 2026-10-27
 
 The first version. librocat is the open-source knowledge base for AI

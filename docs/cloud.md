@@ -704,7 +704,11 @@ come to at most about $0.06 of model time a month.
   to accept Managed Payments' terms in the Dashboard first, and each
   product a tax code Managed Payments accepts.
   When a subscription ends, the workspace returns to Free and keeps every
-  concept; new ones wait until it is under the Free limit.
+  concept; new ones wait until it is under the Free limit. Only a Team
+  shares a library: on any other plan its other members are paused
+  (`convex/membership.ts` `pausedIn`), their memberships and roles kept, so
+  the plan's return brings them back. Their agents stop with the reason, and
+  their dashboard says so.
   A library has one subscription: Checkout refuses a library that has one
   (switching plans runs through support), the webhook acts on each
   subscription as Stripe has it when the event arrives (Stripe doesn't

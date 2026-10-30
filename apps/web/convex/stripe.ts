@@ -127,8 +127,8 @@ function siteUrl(): string {
 
 /**
  * Start a Stripe Checkout session for a paid plan. Returns the URL. Team is
- * priced per person: the seats start at the people already in the library
- * (at least MIN_TEAM_SEATS), and Checkout lets them be changed.
+ * priced per person: the seats start at the people already in the libraries
+ * it would cover (at least MIN_TEAM_SEATS), and Checkout lets them be changed.
  */
 export const createCheckoutSession = action({
   args: {

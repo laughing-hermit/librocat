@@ -38,6 +38,8 @@ export default async function TeamPage() {
   const billedWith = me?.workspace?.billedWith ?? null;
   // Its price as this Team pays it, monthly or yearly: asked of Stripe only when full.
   const seatPrice = full && !billedWith ? await getSeatPrice() : null;
+  // Its Team ended: they stay listed, and come back with Team (convex/membership.ts pausedIn).
+  const paused = team?.members.filter((m) => m.paused).length ?? 0;
 
   return (
     <>
@@ -107,7 +109,9 @@ export default async function TeamPage() {
                     `${team.members.length} people`
                   : team.seats > 1 && !selfHost
                     ? `${team.seatsUsed} of ${team.seats} seats used${team.libraries > 1 ? `, across ${team.libraries} libraries` : ""}`
-                    : "Just you, for now."}
+                    : paused
+                      ? `${paused === 1 ? "Your teammate is" : `Your ${paused} teammates are`} paused: only you can use this library until it's on Team again, which brings them back with their roles.`
+                      : "Just you, for now."}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -126,6 +130,7 @@ export default async function TeamPage() {
                       <ItemTitle className="max-w-full">
                         <span className="truncate">{m.name ?? m.email}</span>
                         {m.you && <Badge variant="secondary">You</Badge>}
+                        {m.paused && <Badge variant="outline">Paused</Badge>}
                         {/* The owner's word says why their row has no menu and no Remove. */}
                         {!(team.admin && !m.owner && !m.you) && (
                           <Badge variant="outline">{m.owner ? "Owner" : ROLE_LABEL[m.role]}</Badge>

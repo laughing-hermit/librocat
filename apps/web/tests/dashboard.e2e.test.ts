@@ -1023,7 +1023,7 @@ run(
     // Seats count each person once, across the Team's libraries.
     const homeCode = await person(owner).mutation(api.team.createInvite, {});
     const mate = new ConvexHttpClient(url as string);
-    signIn(mate, "cover-mate");
+    const { userId: mateId } = signIn(mate, "cover-mate");
     await person(mate).mutation(api.team.accept, { code: homeCode });
     await person(owner).mutation(api.workspaces.switchLibrary, { id: second.id });
     const secondCode = await person(owner).mutation(api.team.createInvite, {});
@@ -1063,6 +1063,40 @@ run(
       id: "n/second",
       description: "Kept.",
     });
+
+    // Only their owner uses them now: the teammates are paused, their places
+    // kept. A teammate's agent is told why, by any way it names a library,
+    // and a write makes no library of its own instead.
+    const paused = /This library is paused for you: it's no longer on Team/;
+    await expect(mate.mutation(api.mcp.list, {})).rejects.toThrow(paused);
+    await expect(mate.mutation(api.mcp.list, { library: second.slug })).rejects.toThrow(paused);
+    await expect(
+      mate.mutation(api.mcp.ingest, { type: "Note", id: "n/mate", title: "Mine" }),
+    ).rejects.toThrow(paused);
+    // Their dashboard opens a library of their own, and says which are paused.
+    const own = await person(mate).mutation(api.workspaces.ensure, {});
+    expect([home, second.id]).not.toContain(own);
+    const mateMe = await person(mate).query(api.workspaces.me, {});
+    expect(mateMe?.workspace?.id).toBe(own);
+    expect(mateMe?.paused.map((l) => l.id).sort()).toEqual([home, second.id].sort());
+    expect(ids(await person(mate).query(api.workspaces.libraries, {}))).toEqual([own]);
+    // A paused admin can't delete it.
+    runDev("dev:setMemberRole", { workspaceId: home, userId: mateId, role: "admin" });
+    await expect(person(mate).mutation(api.workspaces.deleteLibrary, { id: home })).rejects.toThrow(
+      /only the library's owner or an admin can delete it/,
+    );
+    // Its owner sees them paused.
+    await person(owner).mutation(api.workspaces.switchLibrary, { id: home });
+    const kept = await owner.query(api.team.overview, {});
+    expect(kept.members.filter((m) => m.paused).length).toBe(2);
+    expect(kept.members.find((m) => m.owner)?.paused).toBe(false);
+
+    // Team again brings everyone back, with their roles.
+    runDev("billing:setStatus", { workspaceId: home, status: "active", plan: "team" });
+    expect(ids(await mate.mutation(api.mcp.list, { library: second.slug }))).toEqual(["n/second"]);
+    expect(ids(await mate.mutation(api.mcp.list, {}))).toEqual(["n/home"]);
+    expect((await person(mate).query(api.workspaces.me, {}))?.paused).toEqual([]);
+    expect((await owner.query(api.team.overview, {})).members.some((m) => m.paused)).toBe(false);
   },
   120_000,
 );

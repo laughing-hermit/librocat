@@ -8,7 +8,7 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { authComponent } from "./auth";
 import { sendEmail } from "./email";
-import { currentWorkspaceForUserId } from "./membership";
+import { currentWorkspaceForUserId, pausedIn } from "./membership";
 import { indexCreditsOf } from "./model";
 import { payerOf, syncCover, teamHomeOf, teamPeople } from "./teamCover";
 
@@ -237,7 +237,7 @@ export const capNoticeData = internalQuery({
         .query("members")
         .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
         .collect()
-    ).filter((m) => m.role === "admin" || m.userId === ws.ownerId);
+    ).filter((m) => (m.role === "admin" || m.userId === ws.ownerId) && !pausedIn(ws, m.userId));
     const recipients: string[] = [];
     for (const m of admins) {
       const user = await authComponent.getAnyUserById(ctx, m.userId);

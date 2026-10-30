@@ -15,7 +15,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { appLabel } from "./apps";
 import { authUserId, personId } from "./identity";
-import { libraryBySlug, workspaceForUserId } from "./membership";
+import { defaultPaused, libraryBySlug, pausedIn, workspaceForUserId } from "./membership";
 import { nameOf, peopleOf } from "./people";
 
 type Consent = { _id: string; clientId: string; scopes: string[]; createdAt?: number | null };
@@ -71,6 +71,11 @@ export const connected = internalMutation({
     const pick = await pickOf(ctx, userId, clientId);
     const ws = pick ? await ctx.db.get(pick.workspaceId) : await workspaceForUserId(ctx, userId);
     if (!ws) return null;
+    // Their first library is paused (membership.ts defaultPaused): the one
+    // /consent named becomes the agent's pick, so it reaches that one.
+    if (!pick && (await defaultPaused(ctx, userId))) {
+      await ctx.db.insert("agentLibraries", { userId, clientId, workspaceId: ws._id });
+    }
     const row = {
       workspaceId: ws._id,
       name: await clientName(ctx, clientId),
@@ -190,19 +195,24 @@ export const list = query({
         usedAt: null,
       });
     }
-    // Teammates' agents, in each library the caller is in, from people still in it.
+    // Teammates' agents, in each library the caller is in, from people still
+    // in it: none in a library whose Team ended (membership.ts pausedIn).
     const memberships = await ctx.db
       .query("members")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .take(50);
     for (const { workspaceId } of memberships) {
+      const ws = await ctx.db.get(workspaceId);
+      if (!ws || pausedIn(ws, userId)) continue;
       const people = new Set(
         (
           await ctx.db
             .query("members")
             .withIndex("by_workspace", (q) => q.eq("workspaceId", workspaceId))
             .take(500)
-        ).map((m) => m.userId),
+        )
+          .filter((m) => !pausedIn(ws, m.userId))
+          .map((m) => m.userId),
       );
       const theirs = await ctx.db
         .query("agents")

@@ -5,7 +5,7 @@
   <p>
     Tell one agent once. Every agent remembers.<br />
     Claude Code, Codex, Cursor, and Copilot share one library, and so does every
-    teammate's agent. Libro, our AI librarian, keeps it organized and current.
+    teammate's agent. Libro, our AI librarian, keeps it organized and up to date.
   </p>
   <p>
     <a href="https://librocat.com"><strong>librocat.com</strong></a>

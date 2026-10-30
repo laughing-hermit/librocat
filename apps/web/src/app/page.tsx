@@ -44,15 +44,15 @@ import { cn, link } from "@/lib/utils";
 const STEPS = [
   {
     title: "1. Install it",
-    body: "One or two commands in your coding agent. It signs in once, in your browser, and picks its library. No API keys to copy.",
+    body: "Run one or two commands in your coding agent, sign in once in your browser, and pick a library. No API keys to copy.",
   },
   {
     title: "2. Tell it once",
-    body: "Say “remember this”: a decision, a runbook, a document. Your agent files it in your library.",
+    body: "Say “remember this” about a decision, a runbook, or a document, and your agent files it in your library.",
   },
   {
     title: "3. Every agent knows",
-    body: "Ask any agent, tomorrow or next year. It finds the answer, and Libro flags what's out of date.",
+    body: "Ask any agent, tomorrow or a year from now. It finds the answer, and Libro flags anything out of date.",
   },
 ];
 
@@ -62,28 +62,28 @@ const BENEFITS = [
   {
     icon: Users,
     title: "Every agent, every teammate",
-    body: "You on Claude Code, a teammate on Cursor, another on Codex or Copilot: one library, and each agent sees what the others saved. Nobody starts from zero.",
+    body: "You on Claude Code, a teammate on Cursor, another on Codex or Copilot: you all share one library, and every agent sees what the others saved. Nobody starts from zero.",
     shot: agentsShot,
     alt: "A team's connected agents: Cursor, ChatGPT, Claude Code, and Codex, each teammate's, used today and yesterday.",
   },
   {
     icon: RefreshCw,
     title: "Kept current by Libro",
-    body: "Libro, our AI librarian, catalogs what your agents save and reads the files you add, then flags duplicates, stale answers, and what a new file changes. You approve or dismiss.",
+    body: "Libro, our AI librarian, catalogs what your agents save and reads the files you add. It flags duplicates, stale answers, and anything a new file changes, and you approve or dismiss each one.",
     shot: libroShot,
     alt: "A concept Libro flagged: an older runbook this one replaces, with Replace and Dismiss, and the report the concept cites.",
   },
   {
     icon: FileText,
     title: "Your documents, findable",
-    body: "Attach PDFs, docs, slides, and pictures. Your agents find them by their words and titles, and cite them.",
+    body: "Attach PDFs, docs, slides, and pictures. Your agents find them by their words and titles, and cite them in their answers.",
     shot: filesShot,
     alt: "A library's files: a Markdown note, a call transcript, a PDF report, and a saved web page.",
   },
   {
     icon: Unlock,
     title: "Yours to keep",
-    body: "Plain Markdown you can export or import anytime. Open source, and free to self-host.",
+    body: "Everything is plain Markdown that you can export or import anytime. It's open source, and free to self-host.",
     shot: exportShot,
     alt: "Your data in Settings: export everything as Markdown with your files, or import an export.",
   },
@@ -96,31 +96,31 @@ const BENEFITS = [
 const FAQ: { q: string; a: string; table?: boolean }[] = [
   {
     q: "What is librocat?",
-    a: "librocat is an open-source knowledge base that all your AI agents, and everyone on your team, share. Tell one agent once, and every agent knows it. Libro, an AI librarian, keeps it organized and current. Free to start at librocat.com, and free to self-host.",
+    a: "librocat is an open-source knowledge base shared by all your AI agents and everyone on your team. Tell one agent something once, and every agent knows it. Libro, an AI librarian, keeps it organized and up to date. It's free to start at librocat.com, and free to self-host.",
   },
   {
     q: "Which agents does it work with?",
-    a: `Coding and desktop agents, and any agent with Agent Plugins or MCP + Agent Skills (not web chat). Claude Code, Codex, Cursor, and GitHub Copilot each install it with one or two commands, at the top of this page. Every other agent on your computer at once: with Agent Plugins, ${PLUGINS_COMMAND}; without them, MCP + Skills, both on the Connect page. Desktop agents install the same plugin: Claude Desktop and Cowork today, the ChatGPT desktop app through a workspace admin (or its MCP alone without one), and Grok Bot through a Cursor Teams admin. Each agent signs in once in your browser and picks its library; there are no API keys.`,
+    a: `Coding and desktop agents: any agent that supports Agent Plugins, or MCP with Agent Skills (not web chat). Claude Code, Codex, Cursor, and GitHub Copilot each install it with one or two commands, shown at the top of this page. To add it to every other agent on your computer at once, run ${PLUGINS_COMMAND} if they support Agent Plugins, or use MCP and Skills; both are on the Connect page. Desktop agents install the same plugin: Claude Desktop and Cowork today, the ChatGPT desktop app through a workspace admin (or just its MCP without one), and Grok Bot through a Cursor Teams admin. Each agent signs in once in your browser, where you pick its library. There are no API keys.`,
   },
   {
     q: "Can my whole team share one library?",
-    a: "Yes, on the Team plan. Each teammate connects their own agent to the same library: two of you on Claude Code and one on Cursor, everyone on the same agent, or any mix. What one agent saves, every teammate's agent finds. Each person signs in as themselves, as an Admin, an Editor, or a Reader.",
+    a: "Yes, on the Team plan. Each teammate connects their own agent to the same library, in any mix: two of you on Claude Code and one on Cursor, or everyone on the same agent. Whatever one agent saves, every teammate's agent can find. Everyone signs in as themselves, as an Admin, an Editor, or a Reader.",
   },
   {
     q: "How is this different from agent memory or a vector database?",
-    a: "An agent's memory belongs to that one agent, and a vector database hands back text that looks similar. librocat is shared by all your agents and your whole team, and it's organized like a library: a catalog of titles, descriptions, and tags, a thesaurus, links, review dates, and a librarian. Search finds the words you asked for, in any of their forms, so you can see why something was found, and whether it's still true.",
+    a: "An agent's memory belongs to that one agent, and a vector database returns text that only looks similar. librocat is shared by all your agents and your whole team, and it's organized like a real library, with a catalog of titles, descriptions, and tags, a thesaurus, links, review dates, and a librarian. Search matches the words you asked for, in any of their forms, so you can see why something came up and whether it's still true.",
   },
   {
     q: "What does Libro do?",
-    a: "Libro is librocat's librarian (and a cat). When an agent saves a concept without a description or tags, Libro fills them in. It reads every file you add, end to end, describes it, and flags the concepts it likely changes. Each week it lists duplicates and answers past their review date (on Free, in the weeks your agents write), proposes merges and fixes, and checks the merges your agent drafts. You approve or dismiss in Needs you, and every change is saved as a new version.",
+    a: "Libro is librocat's librarian (and a cat). When an agent saves a concept without a description or tags, Libro fills them in. It reads every file you add from start to finish, describes it, and flags the concepts it likely changes. Each week it flags duplicates and answers past their review date (on Free, in the weeks your agents write), suggests what to replace, retire, or give a review date, and checks the merges your agents draft. You approve or dismiss each one in Needs you, and every change is saved as a new version.",
   },
   {
     q: "Is my data private?",
-    a: "Yes. We don't sell your data, use it for ads, or train AI models on it. Libro's model, from TypeSafe AI, reads your concepts and the files you add to catalog them, with zero data retention: nothing it reads is kept after it answers. Search uses no model. The privacy page lists exactly what it reads. Export or delete everything anytime, or run librocat on your own server.",
+    a: "Yes. We don't sell your data, use it for ads, or train AI models on it. Libro's model, from TypeSafe AI, reads your concepts and the files you add in order to catalog them, with zero data retention: nothing it reads is kept after it answers. Search uses no model at all. The privacy page lists exactly what Libro reads. You can export or delete everything anytime, or run librocat on your own server.",
   },
   {
     q: "What can I add to it?",
-    a: "Anything your agents write down, plus documents (PDF, Word, spreadsheets, slides, text, and code) and pictures: up to 50 MB a file on Free, 200 MB on paid plans. On a paid plan, save a link: librocat keeps the page, or the file it points to, up to 50 MB (a PDF, an Office file, a picture). Some sites, like LinkedIn, don't let apps read their pages. Agents find all of it by its words, and a picture by its title. For a recording, keep its transcript.",
+    a: "Anything your agents write down, plus documents (PDF, Word, spreadsheets, slides, text, and code) and pictures, up to 50 MB a file on Free and 200 MB on paid plans. On a paid plan you can also save a link: librocat keeps a copy of the page, or of the file it points to, up to 50 MB (a PDF, an Office file, or a picture). Some sites, like LinkedIn, don't let apps read their pages. Agents find everything by its words, and pictures by their titles. For a recording, save its transcript.",
   },
   {
     q: "What are the limits on each plan?",
@@ -128,8 +128,12 @@ const FAQ: { q: string; a: string; table?: boolean }[] = [
     a: "Free: 1,000 concepts, 100 MB of files (10 MB of it text, 50 MB a file), 200 of Libro's credits, 10,000 calls, 1,500 writes, and 1 GB of file transfer a month. Individual: 5,000 concepts, 5 GB of files (250 MB of text, 200 MB a file), 500 credits, then $0.01 each if you turn on pay-as-you-go, up to a monthly cap you set, 30,000 calls, 5,000 writes, and 10 GB of file transfer a month. Team: 15,000 concepts, 25 GB of files (1 GB of text, 200 MB a file), 2,500 credits, then the same, and 30,000 calls and 5,000 writes a month for each person, with 50 GB of file transfer a month, shared by up to 10 libraries you own, on one bill, where each person is an Admin, an Editor, or a Reader (their agents only read). A credit is a concept Libro catalogs, or about three pages of a file you add; files use at most half. Saving links is on paid plans. Self-hosted librocat has no limits.",
   },
   {
+    q: "What happens if I cancel?",
+    a: "You keep your library. It goes back to Free with everything in it, and new concepts and files wait until it's under Free's limits. On a Team, your teammates pause right away. Free has one library, so 30 days later your others pause: agents can't reach them, but you can still open, export, or delete them. Choose a plan again and everything comes back. If something is still over Free's limits after 12 months, it's deleted, and we email you twice before that happens.",
+  },
+  {
     q: "Is it open source? Can I host it myself?",
-    a: "Yes, all of it, under Apache-2.0, including the code behind librocat.com. Run it with Docker on your own server, free and with no limits, and move a library between the two with Export and Import.",
+    a: "Yes, all of it, under Apache-2.0, including the code that runs librocat.com. Run it with Docker on your own server, free and with no limits, and move a library between the two with Export and Import.",
   },
 ];
 
@@ -245,9 +249,8 @@ export default function Home() {
                 Tell one agent once. Every agent remembers.
               </span>{" "}
               Stop re-explaining your project every session. Claude Code, Codex, Cursor, and Copilot
-              share one library, whichever each teammate uses: you on Claude Code and a teammate on
-              Cursor work from the same knowledge. Libro, our AI librarian, keeps it organized and
-              current.
+              all share one library, so you on Claude Code and a teammate on Cursor work from the
+              same knowledge. Libro, our AI librarian, keeps it organized and up to date.
             </p>
             {/* The four coding agents, the way in (site.ts codingAgents). */}
             <CodingTabs className="mt-10 w-full max-w-xl" />
@@ -341,7 +344,7 @@ export default function Home() {
             Pricing
           </h2>
           <p className="mt-4 text-center text-lg text-muted-foreground">
-            Start free. Pay when you need more room, a second library, or your team.
+            Start free. Upgrade when you need more room, a second library, or your whole team.
           </p>
           <div className="mt-10">
             <PlanCards variant="landing" comingSoon={comingSoon} />

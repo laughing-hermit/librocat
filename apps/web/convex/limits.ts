@@ -66,8 +66,18 @@ export const callAllowance = (plan: Plan, seats = 1): number =>
 /** A library's writes in 30 days. */
 export const writeAllowance = (plan: Plan, seats = 1): number =>
   perPlan(WRITES_PER_MONTH, plan, seats);
-/** A library's file transfer in 30 days, in bytes. */
-export const transferAllowance = (plan: Plan): number => TRANSFER_BYTES_PER_MONTH[plan];
+/**
+ * A library's file transfer in 30 days, in bytes: its plan's, or what it
+ * stores when that's more (a library back on Free from Team), so Export can
+ * take every file at least once in 30 days. Every plan's transfer is above its
+ * storage, so only a library over its plan's storage gets more, bounded by
+ * files it can't add to.
+ */
+export const transferAllowance = (plan: Plan, storedBytes = 0): number =>
+  Math.max(TRANSFER_BYTES_PER_MONTH[plan], storedBytes);
+/** This library's file transfer in 30 days (transferAllowance). */
+export const transferOf = (ws: Doc<"workspaces">): number =>
+  transferAllowance(ws.plan, ws.sourceBytes ?? 0);
 
 const limiter = new RateLimiter(components.rateLimiter, {
   callsFree: { kind: "token bucket", rate: CALLS_PER_MINUTE.free, period: MINUTE },
@@ -167,7 +177,7 @@ export async function takeTransfer(
   bytes: number,
 ): Promise<{ ok: boolean; retryAfter?: number }> {
   if (selfHosted()) return { ok: true };
-  const allowed = transferAllowance(ws.plan);
+  const allowed = transferOf(ws);
   if (bytes > allowed) return { ok: false };
   const r = await limiter.limit(ctx, "monthTransfer", {
     key: poolKey(ws),
@@ -201,7 +211,7 @@ export async function transferLeft(
   ws: Doc<"workspaces">,
 ): Promise<Left | null> {
   if (selfHosted()) return null;
-  return await leftOf(ctx, ws, "monthTransfer", transferAllowance(ws.plan));
+  return await leftOf(ctx, ws, "monthTransfer", transferOf(ws));
 }
 
 /** Every other monthly ceiling, and what's left of each now (`status`); null when self-hosted. */
@@ -214,7 +224,7 @@ export async function monthlyLeft(
   return {
     calls: await leftOf(ctx, ws, "monthCalls", callAllowance(ws.plan, seats)),
     writes: await leftOf(ctx, ws, "monthWrites", writeAllowance(ws.plan, seats)),
-    transfer_bytes: await leftOf(ctx, ws, "monthTransfer", transferAllowance(ws.plan)),
+    transfer_bytes: await leftOf(ctx, ws, "monthTransfer", transferOf(ws)),
   };
 }
 

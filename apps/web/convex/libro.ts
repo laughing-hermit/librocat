@@ -258,23 +258,37 @@ async function applyProposal(
     { ...term, use_for: [...new Set([...(term.use_for ?? []), p.subject])] },
     by,
   );
-  const { more } = await retag(ctx, ws._id, p.subject, p.target);
-  if (more) {
-    await ctx.scheduler.runAfter(0, internal.libro.retagMore, {
-      workspaceId: ws._id,
-      from: p.subject,
-      to: p.target,
-    });
-  }
+  // The retag runs on its own, a page a transaction: approving many proposals
+  // at once (approveAll) can't stack their pages into one transaction.
+  await ctx.scheduler.runAfter(0, internal.libro.retagMore, {
+    workspaceId: ws._id,
+    from: p.subject,
+    to: p.target,
+    by,
+  });
 }
 
-/** The rest of a big retag, a page a transaction (model.ts RETAG_PAGE). */
+/** A write's author (model.ts Writer), as a scheduled function's argument. */
+const writer = v.union(
+  v.string(),
+  v.object({ by: v.string(), userId: v.optional(v.string()), client: v.optional(v.string()) }),
+);
+
+/** A retag, a page a transaction (model.ts RETAG_PAGE), each change a revision by `by`. */
 export const retagMore = internalMutation({
-  args: { workspaceId: v.id("workspaces"), from: v.string(), to: v.string() },
-  handler: async (ctx, { workspaceId, from, to }) => {
+  // Optional: a page scheduled before revisions were kept carries none (it was Libro's).
+  args: {
+    workspaceId: v.id("workspaces"),
+    from: v.string(),
+    to: v.string(),
+    by: v.optional(writer),
+  },
+  handler: async (ctx, { workspaceId, from, to, by = "libro" }) => {
     if (!(await ctx.db.get(workspaceId))) return;
-    const { more } = await retag(ctx, workspaceId, from, to);
-    if (more) await ctx.scheduler.runAfter(0, internal.libro.retagMore, { workspaceId, from, to });
+    const { more } = await retag(ctx, workspaceId, from, to, by);
+    if (more) {
+      await ctx.scheduler.runAfter(0, internal.libro.retagMore, { workspaceId, from, to, by });
+    }
   },
 });
 

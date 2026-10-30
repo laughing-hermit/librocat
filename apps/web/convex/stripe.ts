@@ -19,6 +19,7 @@ import { internal } from "./_generated/api";
 import { type ActionCtx, action, internalAction } from "./_generated/server";
 import { personId } from "./identity";
 import { MAX_TEAM_SEATS, MIN_TEAM_SEATS } from "./model";
+import { hmac } from "./signing";
 
 /** A subscription's seats: the quantity of its one licensed (not metered) item. */
 function seatsOf(sub: Stripe.Subscription): number | undefined {
@@ -504,6 +505,14 @@ export const fulfill = internalAction({
 });
 
 /**
+ * A meter event's identifier: stable per library, concept or file part, and
+ * minute, so Stripe still drops a retry, but opaque to Stripe, so no concept
+ * id or file title leaves librocat. 43 characters; Stripe takes up to 100.
+ */
+export const meterIdentifier = (workspaceId: string, cid: string, minute: number, secret: string) =>
+  hmac(secret, `librocat meter event ${workspaceId}:${cid}:${minute}`);
+
+/**
  * Report one pay-as-you-go indexation to the Stripe meter. Idempotent per
  * concept and minute through `identifier`. Skips (and logs) when Stripe or the
  * customer is not set up, so indexation itself never depends on billing.
@@ -514,14 +523,16 @@ export const reportOverage = internalAction({
     const customer = await ctx.runQuery(internal.billing.customerOf, {
       workspaceId: args.workspaceId,
     });
-    if (!customer || !process.env.STRIPE_SECRET_KEY) {
+    const secret = process.env.BETTER_AUTH_SECRET;
+    if (!customer || !process.env.STRIPE_SECRET_KEY || !secret) {
       console.warn(`index overage not metered (no Stripe customer): ${args.workspaceId}`);
       return null;
     }
+    const minute = Math.floor(Date.now() / 60_000);
     await stripeClient().billing.meterEvents.create({
       event_name: process.env.STRIPE_METER_INDEXATION ?? "librocat_indexation",
       payload: { stripe_customer_id: customer, value: "1" },
-      identifier: `${args.workspaceId}:${args.cid}:${Math.floor(Date.now() / 60_000)}`,
+      identifier: await meterIdentifier(args.workspaceId, args.cid, minute, secret),
     });
     return null;
   },

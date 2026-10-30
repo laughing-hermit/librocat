@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "vitest";
 import { foldQuestion, promote, summarize } from "../convex/reference";
-import { type Report, renderReport, unsubscribeToken } from "../convex/report";
+import { previousFirstMonday, type Report, renderReport, unsubscribeToken } from "../convex/report";
 
 describe("the ready-reference file", () => {
   test("a question's key is its content words, so rewordings of the same words meet", () => {
@@ -61,6 +61,7 @@ describe("Libro's report", () => {
   const report: Report = {
     from: 0,
     to: 1,
+    period: "week",
     concepts: 42,
     added: {
       count: 3,
@@ -120,6 +121,19 @@ describe("Libro's report", () => {
     expect(text).toContain("Nothing needs you.");
     expect(text).toContain("No questions this week.");
     expect(text).not.toContain("Missing");
+
+    // Free gets it once a month, covering the month.
+    const month = renderReport({ ...quiet, period: "month" }, opts);
+    expect(month.subject).toBe("Libro's report: your library this month");
+    expect(month.text).toContain("This month");
+    expect(month.text).toContain("No questions this month.");
+  });
+
+  test("Free's report covers the month since the previous month's first Monday", () => {
+    const at = (iso: string) => Date.parse(iso);
+    expect(previousFirstMonday(at("2026-12-07T08:00:00Z"))).toBe(at("2026-11-02T08:00:00Z"));
+    expect(previousFirstMonday(at("2026-11-02T08:00:00Z"))).toBe(at("2026-10-05T08:00:00Z"));
+    expect(previousFirstMonday(at("2027-01-04T08:00:00Z"))).toBe(at("2026-12-07T08:00:00Z"));
   });
 
   test("unsubscribe tokens are per member and per secret", async () => {

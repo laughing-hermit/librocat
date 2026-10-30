@@ -206,6 +206,17 @@ run(
 );
 
 run(
+  "a library storing more than its plan's transfer (back on Free from Team) can move every file once in 30 days",
+  async () => {
+    const { client, userId } = freeLibrary("stored");
+    runDev("dev:setSourceBytes", { userId, bytes: 3_000_000_000 });
+    const { monthly } = await client.mutation(api.mcp.status, {});
+    expect(monthly?.transfer_bytes).toEqual({ included: 3_000_000_000, left: 3_000_000_000 });
+  },
+  60_000,
+);
+
+run(
   "a library past its calls or writes a month is told which, and when it can go on",
   async () => {
     const { client, workspaceId } = freeLibrary("monthly");

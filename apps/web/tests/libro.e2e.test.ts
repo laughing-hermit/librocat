@@ -347,9 +347,19 @@ run(
     await client.mutation(api.libro.decide, { id: found[0]?.id as never, decision: "approve" });
     const th = await client.mutation(api.mcp.thesaurus, {});
     expect(th["twin-kubernetes"]?.use_for).toEqual(["twin-k8s"]);
-    const upgrades = await client.mutation(api.mcp.get, { id: "infra/upgrades" });
+    // The retag runs a moment after the approval, each change a revision by the proposer.
+    let upgrades = await client.mutation(api.mcp.get, { id: "infra/upgrades" });
+    for (let i = 0; i < 40 && upgrades?.tags.includes("twin-k8s"); i++) {
+      await sleep(250);
+      upgrades = await client.mutation(api.mcp.get, { id: "infra/upgrades" });
+    }
     expect(upgrades?.tags).toContain("twin-kubernetes");
     expect(upgrades?.tags).not.toContain("twin-k8s");
+    const history = (await client.mutation(api.mcp.get, {
+      id: "infra/upgrades",
+      history: true,
+    })) as { history?: { kind: string; by: string; tags?: string[] }[] };
+    expect(history?.history?.[0]).toMatchObject({ kind: "update", by: "libro" });
   },
   60_000,
 );

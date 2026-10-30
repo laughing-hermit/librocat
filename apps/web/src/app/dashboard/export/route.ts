@@ -231,7 +231,7 @@ function filePart(
         zip,
         `okf/_sources/files/part-${n}-README.txt`,
         `${leftOut} attached file(s) stayed out: this library has used its file transfer ` +
-          "for now. Download this part again once it refills (Billing shows it).\n",
+          "for now. Download this part again once it refills (every file fits at least once in 30 days).\n",
       );
     }
   });

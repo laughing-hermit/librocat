@@ -43,6 +43,8 @@ export const REPORT_SPACING_MS = 500;
 export type Report = {
   from: number;
   to: number;
+  /** A week on paid plans; on Free, the month since its last report (reportAll). */
+  period: "week" | "month";
   concepts: number;
   /** The newest five's titles, and their ids in the same order (Home links them). */
   added: { count: number; titles: string[]; ids: string[] };
@@ -67,8 +69,19 @@ export type Report = {
 };
 
 /**
- * The week in a library, ending `now`. The Overview passes what it already
- * read: a pass over the concepts, and the questions since at least a week ago.
+ * The previous month's first Monday, at `now`'s time of day: when Free's last
+ * report went out (reportAll sends it on the month's first Monday). Pure.
+ */
+export function previousFirstMonday(now: number): number {
+  const d = new Date(now);
+  const first = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1) + (now % DAY);
+  return first + ((8 - new Date(first).getUTCDay()) % 7) * DAY;
+}
+
+/**
+ * The week in a library, ending `now`; on Free, the month since its last
+ * report. The Overview passes what it already read: a pass over the concepts,
+ * and the questions since at least a week ago.
  */
 export async function buildReport(
   ctx: QueryCtx,
@@ -76,7 +89,8 @@ export async function buildReport(
   now = Date.now(),
   given: { scan?: Scan; questions?: Doc<"questions">[] } = {},
 ): Promise<Report> {
-  const from = now - 7 * DAY;
+  const period = paidFeatures(ws.plan) ? "week" : "month";
+  const from = period === "week" ? now - 7 * DAY : previousFirstMonday(now);
   // The week's news is in what changed lately: one capped pass, newest first.
   const scan = given.scan ?? (await scanConcepts(ctx, ws, "recent"));
   const docs = scan.docs.filter((d) => d.cid !== THESAURUS_ID);
@@ -95,6 +109,7 @@ export async function buildReport(
   return {
     from,
     to: now,
+    period,
     concepts: scan.whole ? live.length : ws.conceptCount,
     added: {
       count: added.length,
@@ -143,11 +158,11 @@ export function renderReport(
   ].filter(Boolean);
   const subject = headline.length
     ? `Libro's report: ${headline.join(", ")}`
-    : "Libro's report: your library this week";
+    : `Libro's report: your library this ${r.period}`;
 
   const sections: { title: string; lines: string[] }[] = [
     {
-      title: "This week",
+      title: `This ${r.period}`,
       lines: [
         r.added.count
           ? `${plural(r.added.count, "new concept")}: ${r.added.titles.map((t) => `"${t}"`).join(", ")}`
@@ -180,7 +195,7 @@ export function renderReport(
                 `Asked most: "${q.text}" (${q.count} times)${q.answer ? `, answered by ${q.answer}` : ""}`,
             ),
           ]
-        : ["No questions this week."],
+        : [`No questions this ${r.period}.`],
     },
   ];
   if (r.unread_sources.count) {

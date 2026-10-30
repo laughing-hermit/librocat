@@ -149,6 +149,17 @@ export default defineSchema({
     ownerId: v.string(),
     since: v.number(),
     keep: v.optional(v.id("workspaces")),
+    // When what's still over is deleted: a year on, or later if a warning
+    // went out late. `warned`: when each email was sent; the deletion
+    // waits for `soon` and `last` (grace.ts expire).
+    deleteAt: v.optional(v.number()),
+    warned: v.optional(
+      v.object({
+        start: v.optional(v.number()),
+        soon: v.optional(v.number()),
+        last: v.optional(v.number()),
+      }),
+    ),
   }).index("by_owner", ["ownerId"]),
 
   // Team invites: one share link per workspace (convex/team.ts). Anyone with

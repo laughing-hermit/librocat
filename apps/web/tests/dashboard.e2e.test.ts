@@ -1174,9 +1174,23 @@ run(
     expect((await shown())?.conceptCount).toBe(1_003);
     await owner.mutation(api.mcp.get, { id: "s1/c1" });
 
-    // Month 12, now for the test: Second goes, then in My library the three
-    // concepts changed least recently.
+    // Month 12 without the warnings sent: nothing goes. The first warning
+    // goes out now, and the deletion waits 30 days from it.
     runDev("dev:graceStep", { ownerId, step: "expire" });
+    for (let i = 0; i < 40 && !runDevJson("dev:graceOf", { ownerId })?.warned?.soon; i++) {
+      await sleep(250);
+    }
+    const waiting = runDevJson("dev:graceOf", { ownerId });
+    expect(waiting.warned.soon).toBeGreaterThan(grace.since);
+    expect(waiting.deleteAt).toBeGreaterThanOrEqual(waiting.warned.soon + 30 * 86_400_000);
+    expect((await shown())?.grace?.deletesAt).toBe(waiting.deleteAt);
+    await sleep(1_000);
+    expect(runDevJson("dev:libraryGone", { workspaceId: second.id })).toBe(false);
+    expect((await shown())?.conceptCount).toBe(1_003);
+
+    // Month 12, both warnings sent and their dates come: Second goes, then
+    // in My library the three concepts changed least recently.
+    runDev("dev:graceStep", { ownerId, step: "lapse" });
     for (let i = 0; i < 80 && (await shown())?.conceptCount !== 1_000; i++) await sleep(500);
     expect((await shown())?.conceptCount).toBe(1_000);
     await owner.mutation(api.mcp.get, { id: "s0/c0" });

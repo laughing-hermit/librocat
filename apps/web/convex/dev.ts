@@ -446,9 +446,16 @@ export const graceOf = internalQuery({
       .unique(),
 });
 
-/** Take an owner's grace to day 30 (`pause`) or month 12 (`expire`) now (grace.ts): for the e2e. */
+/**
+ * Take an owner's grace to day 30 (`pause`) or month 12 (`expire`) now
+ * (grace.ts), for the e2e. `lapse`: month 12 as if both warnings went out
+ * on time, and their dates came.
+ */
 export const graceStep = internalMutation({
-  args: { ownerId: v.string(), step: v.union(v.literal("pause"), v.literal("expire")) },
+  args: {
+    ownerId: v.string(),
+    step: v.union(v.literal("pause"), v.literal("expire"), v.literal("lapse")),
+  },
   handler: async (ctx, { ownerId, step }) => {
     const row = await ctx.db
       .query("graces")
@@ -456,11 +463,19 @@ export const graceStep = internalMutation({
       .unique();
     if (!row) return;
     const at = { ownerId, since: row.since };
-    await ctx.scheduler.runAfter(
-      0,
-      step === "pause" ? internal.grace.pause : internal.grace.expire,
-      at,
-    );
+    if (step === "pause") {
+      await ctx.scheduler.runAfter(0, internal.grace.pause, at);
+      return;
+    }
+    if (step === "lapse") {
+      const now = Date.now();
+      const day = 86_400_000;
+      await ctx.db.patch(row._id, {
+        warned: { ...row.warned, soon: now - 31 * day, last: now - 8 * day },
+        deleteAt: now - 1,
+      });
+    }
+    await ctx.scheduler.runAfter(0, internal.grace.expire, at);
   },
 });
 

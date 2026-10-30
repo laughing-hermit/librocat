@@ -14,8 +14,9 @@ change a tool argument. A patch version never does.
   on, the libraries past Free's one pause: no agent reaches them, and they
   can still be opened, exported, or deleted. A plan brings one back. What's
   still paused or over Free's limits after 12 months is deleted, with
-  emails when the plan ends and 30 and 7 days before. Nothing within
-  Free's limits is.
+  emails when the plan ends and 30 and 7 days before; the deletion waits
+  until both warnings are sent, and moves out if one goes late. Nothing
+  within Free's limits is.
 
 ## [0.0.0] - 2026-10-27
 

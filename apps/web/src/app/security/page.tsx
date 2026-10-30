@@ -5,7 +5,7 @@ import { site } from "@/lib/site";
 export const metadata = {
   title: "Security | librocat",
   description:
-    "How librocat Cloud keeps a library safe: OAuth 2.1 sign-in for agents, refused secrets, encryption, the providers involved, and how to report a vulnerability.",
+    "How librocat keeps a library safe: OAuth 2.1 sign-in for agents, refused secrets, encryption, the providers involved, and how to report a vulnerability.",
   alternates: { canonical: "/security" },
 };
 
@@ -56,7 +56,7 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: "Your exit",
-    body: "Export, in Settings, downloads the whole library as an OKF zip that any librocat reads, Cloud or self-hosted. Empty this library, in Settings, erases every concept, link, revision, and kept source at once. Delete account erases your account and every library you own. If we close an account, we erase its data within 30 days. Deleted data leaves backups within 30 days.",
+    body: "Export, in Settings, downloads the whole library as an OKF zip that any librocat reads, hosted or self-hosted. Empty this library, in Settings, erases every concept, link, revision, and kept source at once. Delete account erases your account and every library you own. If we close an account, we erase its data within 30 days. Deleted data leaves backups within 30 days.",
   },
   {
     title: "What we do not claim",

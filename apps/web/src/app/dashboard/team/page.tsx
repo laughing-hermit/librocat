@@ -33,7 +33,7 @@ export default async function TeamPage() {
   const plan = me?.workspace?.plan ?? "free";
   const origin = await siteOrigin();
   const shareable = (team?.seats ?? 0) > 1;
-  // Every seat taken: a new person can't join until there's one more (Cloud).
+  // Every seat taken: a new person can't join until there's one more (librocat.com).
   const full = shareable && !selfHost && team !== null && team.seatsUsed >= team.seats;
   const billedWith = me?.workspace?.billedWith ?? null;
   // Its price as this Team pays it, monthly or yearly: asked of Stripe only when full.

@@ -607,7 +607,7 @@ export async function findingAids(ctx: QueryCtx, ws: Doc<"workspaces">, dir?: st
     aids,
     written: 0,
     note:
-      "Cloud returns the aids; the export zip includes them as index.md" +
+      "librocat returns the aids; the export zip includes them as index.md" +
       (whole
         ? ""
         : `. ${scannedNote(ws, "the first by id; the export has every shelf", docs.length)}`),
@@ -632,7 +632,7 @@ export async function weedReport(
   const scan = given ?? (await scanConcepts(ctx, ws, "oldest"));
   const { docs, whole } = scan;
   // The mechanical rules run in the core (the same code as Local); only the
-  // circulation lists are Cloud's own, because only Cloud records access.
+  // circulation lists are librocat.com's own, because only librocat.com records access.
   const w = weedRules(
     docs.map((d) => ({
       id: d.cid,

@@ -2,7 +2,7 @@ export const site = {
   name: "librocat",
   tagline: "The Open-Source Knowledge Base for AI Agents",
   description:
-    "One knowledge base every AI agent shares over MCP, managed by Libro, an AI librarian (and a cat): an LLM wiki in Google's Open Knowledge Format, cataloged, cross-referenced, and kept current with library and information science. librocat Cloud is free to start at librocat.com/mcp. Open source (Apache-2.0): self-host it with Docker, like Supabase.",
+    "One knowledge base every AI agent shares over MCP, managed by Libro, an AI librarian (and a cat): an LLM wiki in Google's Open Knowledge Format, cataloged, cross-referenced, and kept current with library and information science. librocat is free to start at librocat.com/mcp. Open source (Apache-2.0): self-host it with Docker, like Supabase.",
   // The landing page's meta description: what a search result shows, in
   // the 160 characters it shows. `description` stays the long one.
   summary:
@@ -29,7 +29,7 @@ export const site = {
     "At its core, librocat is a library and information science tool for organizing knowledge for AI agents. It stores, catalogs, and retrieves what you put in it. It does not make decisions and is not responsible for the content of your concepts or for actions your agents take. Export or delete your data anytime.",
 };
 
-/** The librocat Cloud MCP endpoint. A self-hosted librocat has its own. */
+/** librocat.com's MCP endpoint. A self-hosted librocat has its own. */
 export const MCP_URL = "https://librocat.com/mcp";
 
 /** A URL as one shell word: zsh reads a second library's `?library=` as a pattern, so it's quoted. */

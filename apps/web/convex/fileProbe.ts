@@ -6,7 +6,7 @@
  * sharp, an external package: convex.json) and a spreadsheet read as CSV
  * (officeText.ts). Fixed inputs made here, never a library's.
  *
- *   npx convex run fileProbe:run          # librocat Cloud, or a dev deployment
+ *   npx convex run fileProbe:run          # librocat.com, or a dev deployment
  *   ./models.sh files                     # self-hosted (self-host/)
  */
 

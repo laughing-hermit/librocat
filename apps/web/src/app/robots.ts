@@ -2,7 +2,7 @@
 import type { MetadataRoute } from "next";
 import { selfHost } from "../lib/self-host";
 
-// librocat Cloud welcomes every crawler to its public pages, search engines
+// librocat.com welcomes every crawler to its public pages, search engines
 // and AI assistants alike: an answer engine can only cite what it can read.
 // The dashboard, the API, and the MCP endpoint aren't pages; the sign-in
 // pages say noindex themselves. A self-hosted librocat is someone's own

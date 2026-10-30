@@ -1,7 +1,7 @@
 # Architecture
 
 One TypeScript monorepo (pnpm workspaces + Turborepo + Biome). One service,
-run two ways, like Supabase: librocat Cloud at librocat.com, or self-hosted
+run two ways, like Supabase: librocat at librocat.com, or self-hosted
 with Docker (`self-host/`, SELF_HOSTING.md). One tool surface.
 
 ```text
@@ -106,7 +106,7 @@ searching. There is no search by meaning: no embedding model and no vectors
   answer first (the ready-reference file, docs/cloud.md).
 
 **Measured, as history.** From 2026-09-27 to 2026-10-20, search also ranked
-by meaning, with embeddings (Gemini Embedding on Cloud). On 2026-09-28 an
+by meaning, with embeddings (Gemini Embedding on librocat.com). On 2026-09-28 an
 agent's own searches were measured (Gemini 3.8 Flash played the agent, with
 up to two retries; librocat's docs as 137 concepts, 69 questions):
 

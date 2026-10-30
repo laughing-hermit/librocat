@@ -1,6 +1,6 @@
 # Self-hosting librocat
 
-librocat is open source, all of it, under Apache-2.0: librocat Cloud at
+librocat is open source, all of it, under Apache-2.0: librocat at
 librocat.com runs this repository. Self-hosting runs the same site,
 dashboard, and MCP on your own machine or server with Docker, on a
 self-hosted Convex backend, with `LIBROCAT_SELF_HOST=1`: no plans, no quotas,
@@ -9,8 +9,8 @@ no billing. It's modeled on
 Docker Compose, settings in environment variables, and support from the
 community (GitHub issues and discussions).
 
-So there are two free ways to run librocat: **librocat Cloud's free plan**,
-managed for you, or **self-hosting**, run by you. The paid Cloud plans stay
+So there are two free ways to run librocat: **librocat.com's free plan**,
+managed for you, or **self-hosting**, run by you. The paid plans on librocat.com stay
 managed for you and add more room, a team's shared library, the reading list
 and source watch, and Libro's report every week (Free gets it once a month).
 A self-hosted librocat has all of that with no limits, on your own server.
@@ -26,8 +26,8 @@ merge drafts. Search needs no model: it goes by words, through your
 library's thesaurus, and your agent writes the searches and tries other
 words when the first ones miss.
 
-librocat Cloud runs Jev, from TypeSafe. With Jev, a self-hosted librocat
-works like Cloud: `AI_GATEWAY_API_KEY` runs it through the Vercel AI
+librocat.com runs Jev, from TypeSafe. With Jev, a self-hosted librocat
+works like librocat.com: `AI_GATEWAY_API_KEY` runs it through the Vercel AI
 Gateway, or `TYPESAFE_API_KEY` from TypeSafe itself. An open-source one on
 your own machine works, but measures lower: on librocat's own judgments, Von
 gets 39% right and Jev 92% ([Models](#models-bring-your-own)). With no model
@@ -85,7 +85,7 @@ Then:
    then set `serverUrl` in its `mcp_config.json`. By hand instead: `claude mcp add --transport http librocat
    http://localhost:3000/mcp`. The dashboard's Connect page shows the same
    MCP + Skills commands with your server's address, and that address for a
-   desktop agent's custom connector (librocat's plugin reaches librocat Cloud
+   desktop agent's custom connector (librocat's plugin reaches librocat.com
    only). On its first call, the agent opens your browser to sign in and
    approve it. Use `localhost`, not `127.0.0.1`: the address is part of
    every token.
@@ -120,7 +120,7 @@ your vocabulary already say, and does what an agent can't do alone across a
 whole library. It works best with Jev, runs with an open-source model or
 none, and can be online or on your own machine:
 
-| Model | What it does | librocat Cloud runs | Without it |
+| Model | What it does | librocat.com runs | Without it |
 | --- | --- | --- | --- |
 | **System One** | Typed judgments (yes or no, one of a set, a score) instead of text: [TypeSafe](https://typesafe.ai)'s Jev, or an open-source model on a server of your own. It catalogs a concept an agent left blank, picking a description from its own sentences and tags from your vocabulary. It confirms duplicates, suggests review dates, and checks the merges your agent drafts. | Jev | A concept an agent leaves blank stays blank. Jev's screens are off: the duplicates it confirms, review dates, and merge-draft checks. |
 
@@ -131,7 +131,7 @@ with matches in a concept's title, description, and tags counting twice, and
 it finds kept sources by their text and their title (docs/architecture.md,
 "Search").
 
-librocat Cloud runs Jev through the Vercel AI Gateway, and its users don't
+librocat.com runs Jev through the Vercel AI Gateway, and its users don't
 choose. Self-hosted, you choose in `.env`, whose Models section lists the
 options, then run `docker compose up -d --build`. Compose reads your shell's
 variables before `.env`: if your shell exports `AI_GATEWAY_API_KEY` or
@@ -140,7 +140,7 @@ variables before `.env`: if your shell exports `AI_GATEWAY_API_KEY` or
 ### Three ways to run it
 
 - **Online.** Jev from a provider: with only `AI_GATEWAY_API_KEY`, it's
-  librocat Cloud's pipeline; or Jev from TypeSafe, with `TYPESAFE_API_KEY`.
+  librocat.com's pipeline; or Jev from TypeSafe, with `TYPESAFE_API_KEY`.
   Example: Claude Code driving your librocat on a server.
 - **Offline.** An open-source System One on your machine, or none. Nothing
   leaves it after the first downloads:
@@ -157,7 +157,7 @@ variables before `.env`: if your shell exports `AI_GATEWAY_API_KEY` or
   `npx skills add laughing-hermit/librocat -g -a opencode`.
 - **Hybrid.** Your agent and librocat's model are separate choices. For
   example: Claude Code with an offline librocat; or opencode on a local
-  model with librocat Cloud, or with your own librocat running Jev.
+  model with librocat.com, or with your own librocat running Jev.
 
 ### The System One model: Jev, or an open-source one
 
@@ -239,7 +239,7 @@ over 200 MB are kept but not read.
 
 librocat's server needs no writing model: your agent (Claude Code, Codex,
 Cursor, ...) does the writing, on its own sign-in and subscription, and
-connects to your librocat as to Cloud. A Claude Code or Codex subscription
+connects to your librocat as to librocat.com. A Claude Code or Codex subscription
 can't serve as librocat's model: those sign-ins are for the person using
 the agent, and librocat's jobs run unattended, on a server.
 
@@ -302,7 +302,7 @@ own login in front of it.
   - `docker compose down` keeps the data;
   - `docker compose down -v` deletes it.
 
-## Move between self-hosted and librocat Cloud
+## Move between self-hosted and librocat.com
 
 A library moves as OKF files, either way, through the dashboard:
 
@@ -313,7 +313,7 @@ A library moves as OKF files, either way, through the dashboard:
    size: your browser reads them, and each concept, source, and file goes
    through the usual limits.
 3. Point your agents at the new URL with the MCP + Skills commands
-   (librocat Cloud's here; for your server, its own):
+   (librocat.com's here; for your server, its own):
 
    ```bash
    npx add-mcp https://librocat.com/mcp --name librocat -g
@@ -328,7 +328,7 @@ Revisions stay behind: the files carry each concept as it is now.
 - You choose the model, or none ([Models](#models-bring-your-own)).
 - Libro is the same: the weekly mechanical review, and with Jev, its
   screens (duplicates, review dates, and merge-draft checks). Your agents
-  work its shelf, here as on Cloud.
+  work its shelf, here as on librocat.com.
 - Convex runs on SQLite in the volume. For Postgres, S3, or several
   machines, see [Convex's self-hosting guide](https://github.com/get-convex/convex-backend/tree/main/self-hosted)
   and add its settings to the `convex` service.

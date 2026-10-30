@@ -53,8 +53,8 @@ Ask before storing personal data or anything the user may not want shared.
   facts, and procedures, typically 3 to 15 concepts, not one per page.
 - Put the answer in the first paragraph; details follow. A reader stops as
   soon as they have enough.
-- A body holds at most 16 KB (16,000 bytes, about 2,500 words) on librocat
-  Cloud, and 64 KB on a self-hosted librocat. Long before that, split it
+- A body holds at most 16 KB (16,000 bytes, about 2,500 words) on
+  librocat.com, and 64 KB on a self-hosted librocat. Long before that, split it
   into concepts and link them.
 - Link related concepts with Markdown links to `.md` targets:
   `[the index layer](/architecture/index.md)` from the bundle root, or

@@ -8,7 +8,7 @@
  *   picks from the concept's own words, and Libro's screens.
  * Search is by words (model.ts search) and calls no model.
  *
- * librocat Cloud runs one pipeline, and its users don't choose models: every
+ * librocat.com runs one pipeline, and its users don't choose models: every
  * call goes through the Vercel AI Gateway with AI_GATEWAY_API_KEY
  * (LIBROCAT_AI_GATEWAY_URL moves the base URL; the e2e fake gateway uses it),
  * Jev through its `/v1/evaluate`. A Free library's calls use
@@ -43,7 +43,7 @@ export interface AiTarget {
 }
 
 export const DEFAULT_GATEWAY = "https://ai-gateway.vercel.sh/v1";
-/** librocat Cloud's model. */
+/** librocat.com's model. */
 export const DEFAULT_MODELS = { eval: "typesafe-ai/jev" } as const;
 /** TypeSafe's own API, for Jev without the gateway (a self-hosted librocat with TYPESAFE_API_KEY). */
 export const TYPESAFE_API = "https://api.typesafe.ai/v1";
@@ -57,7 +57,7 @@ export const gatewayBase = (): string =>
 
 /**
  * Where `job` goes, or null when this deployment has no model for it. `plan`
- * is the library's, for the key its calls are billed to on librocat Cloud.
+ * is the library's, for the key its calls are billed to on librocat.com.
  */
 export function resolve(_job: Job, plan?: string): AiTarget | null {
   return selfHosted() ? systemOne() : viaGateway(plan);

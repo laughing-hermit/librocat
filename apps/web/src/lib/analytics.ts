@@ -3,7 +3,7 @@ import { track } from "@vercel/analytics";
 import type { codingAgents, desktopAgents } from "./site";
 
 /**
- * What Vercel Web Analytics counts on librocat Cloud (the privacy page,
+ * What Vercel Web Analytics counts on librocat.com (the privacy page,
  * "Cookies"): a page view for every page, the dashboard's too, and the
  * product events below. A page view reports the page's route, never what the
  * page shows. A concept, a kept source, or an invite reports its route

@@ -12,7 +12,7 @@ change a tool argument. A patch version never does.
 The first version. librocat is the open-source knowledge base for AI
 agents, managed by Libro, an AI librarian.
 
-- librocat Cloud at `librocat.com`, free to start, or self-hosted with
+- librocat at `librocat.com`, free to start, or self-hosted with
   Docker (`self-host/`, [SELF_HOSTING.md](./SELF_HOSTING.md)). Agents connect
   over remote MCP and sign in once in the browser.
 - Sixteen MCP tools ([docs/mcp-tools.md](./docs/mcp-tools.md)) and three
@@ -28,7 +28,7 @@ agents, managed by Libro, an AI librarian.
   the searches.
 - The Agent Plugin carries no version, so agents pick up every commit to
   `main`.
-- Export and Import, in Settings, move a library between librocat Cloud and
+- Export and Import, in Settings, move a library between librocat.com and
   a self-hosted librocat, attached files included.
 
 [Unreleased]: https://github.com/laughing-hermit/librocat/compare/v0.0.0...HEAD

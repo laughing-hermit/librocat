@@ -79,7 +79,7 @@ npx skills add laughing-hermit/librocat -g
 The same site, dashboard, and MCP on your own server, with Docker or Podman.
 No limits and no billing. Bring your own models, or none: it also runs
 offline. See [SELF_HOSTING.md](./SELF_HOSTING.md). The dashboard's Export and
-Import move a library between your server and librocat Cloud.
+Import move a library between your server and librocat.com.
 
 ## Pricing
 
@@ -109,7 +109,7 @@ the pattern Andrej Karpathy described, for all your agents at once:
 
 Read more: [the MCP tools](./docs/mcp-tools.md),
 [the architecture](./docs/architecture.md), [OKF in librocat](./docs/okf.md),
-and [librocat Cloud](./docs/cloud.md).
+and [the hosted librocat](./docs/cloud.md).
 
 ```text
 apps/web          librocat.com: the landing page, the dashboard, the remote MCP,

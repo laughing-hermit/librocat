@@ -82,7 +82,7 @@ const addText = (zip: ZipWriter<unknown>, name: string, value: string) =>
  * Download the library as an OKF bundle, in parts (src/lib/export-parts.ts):
  * without a range, the library part (the concepts, the tags, and every kept
  * source's text); with `from` and `to`, a file part (the attached files with
- * ids in that range). Import, in any librocat's Settings, Cloud or
+ * ids in that range). Import, in any librocat's Settings, hosted or
  * self-hosted, brings them back.
  * No lock-in by design: the export is the same format the user would have
  * written by hand.

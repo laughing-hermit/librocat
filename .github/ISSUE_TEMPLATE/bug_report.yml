@@ -10,7 +10,7 @@ body:
     attributes:
       label: Where
       options:
-        - librocat Cloud (librocat.com)
+        - librocat.com (hosted)
         - A self-hosted librocat
     validations:
       required: true

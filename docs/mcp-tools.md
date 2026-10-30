@@ -1,14 +1,14 @@
 # MCP tools
 
 The agent-facing interface, defined once in `packages/mcp/src/tools.ts` and
-served by the MCP endpoint: `https://librocat.com/mcp` on librocat Cloud, or
+served by the MCP endpoint: `https://librocat.com/mcp` on librocat.com, or
 `/mcp` on a self-hosted librocat. It resolves the library from the bearer
 token (OAuth 2.1) and is stateless. Sixteen tools.
 
 | Tool | Purpose | Key arguments |
 |------|---------|---------------|
 | `search` | Search by words, expanded through the thesaurus, with matches in the catalog record (title, description, tags) counting twice, and snippets; then the kept sources that match by their words or their title (`type: "Source"`) | `query`, `type?`, `tag?`, `status?`, `limit?`, `shelf?`, `author?`, `sources?` |
-| `get_concept` | Read one concept in full, with its `links` (outbound and inbound, each `{ id, title, exists }`); `history: true` adds its revisions, newest first (one per write that changed something; librocat Cloud keeps each concept's last 100); `revision` returns that one revision's snapshot instead. With `ids`, up to 20 as they are (for copying a library; not counted as people's reads) | `id`, `history?`, `revision?`, or `ids` |
+| `get_concept` | Read one concept in full, with its `links` (outbound and inbound, each `{ id, title, exists }`); `history: true` adds its revisions, newest first (one per write that changed something; librocat.com keeps each concept's last 100); `revision` returns that one revision's snapshot instead. With `ids`, up to 20 as they are (for copying a library; not counted as people's reads) | `id`, `history?`, `revision?`, or `ids` |
 | `list` | List concept metadata, 100 a page at most: by `cursor` (null first, then the one each page returns, until null) through a whole library, or by `offset` through the first 500. `format: "markdown"` returns the finding aids instead: one shelf list per directory (the export writes them as `index.md`) | `type?`, `tag?`, `status?`, `limit?`, `cursor?`, `offset?`, `shelf?`, `author?`, `format?`, `dir?` |
 | `graph` | Breadth-first subgraph (nodes + edges) | `id`, `depth?` (1–4) |
 | `ingest` | Create a concept, index it (an existing `id` is overwritten in full). A new concept's result may carry `possible_duplicates`: up to 3 existing concepts that share its words, each `{ id, title, description }`, for the agent to `update` or `propose` a merge with when one is the same subject. Batch form: `concepts: [...]` writes up to 100 in one call and reports, per item, the id or the error (and the first 20 items' `possible_duplicates`) | `type`, `title?`, `description?`, `body?`, `tags?`, `id?`, `status?`, `stale_after?`, `sources?` or `concepts?` |
@@ -17,7 +17,7 @@ token (OAuth 2.1) and is stateless. Sixteen tools.
 | `files_changed` | Files changed (after a commit or PR): the concepts whose `sources` name one come up for review | `paths`, `commit?`, `shelf?` |
 | `thesaurus` | Read the tag thesaurus | — |
 | `set_term` | Set one preferred tag's `broader`/`narrower`/`related`/`use_for` and `scope_note`, or drop its entry (`remove: true`) | `tag`, `broader?`, `narrower?`, `related?`, `use_for?`, `scope_note?`, `remove?` |
-| `status` | Counts, the type/tag vocabulary, links, plan, quota, `library.role` (`admin`, `editor`, or `reader`: a reader's agent only reads), and Libro's credits this month (`index_credits`, Cloud) or `models` (self-hosted: what runs Libro's model, or why it's off), `review_shelf` (Libro's open proposals), and `sources` (what's kept, and how much of it is text). Broken links are in `review_shelf`'s `weeding`, unread sources in `get_source` | — |
+| `status` | Counts, the type/tag vocabulary, links, plan, quota, `library.role` (`admin`, `editor`, or `reader`: a reader's agent only reads), and Libro's credits this month (`index_credits`, librocat.com) or `models` (self-hosted: what runs Libro's model, or why it's off), `review_shelf` (Libro's open proposals), and `sources` (what's kept, and how much of it is text). Broken links are in `review_shelf`'s `weeding`, unread sources in `get_source` | — |
 | `add_source` | Keep a source: a file (two steps: `file` returns an upload URL, then `storage_id` attaches the upload), or the exact text of a document, page, or transcript; the same file or text again returns the kept copy, and new text for a kept URL (or `id`) replaces it and puts the concepts citing it up for review | `title?`, `text?`, `location?`, `kind?`, `id?`, `file?`, `storage_id?`, `filename?` |
 | `get_source` | Read a kept source: the list (unread first), passages for a `query`, or one source's parts; a file comes with a link that lasts an hour or two (`download_url`, or `download_parts` past 16 MB), its parts say what they are, and a picture comes back as an image | `ref?`, `query?`, `part?`, `parts?`, `limit?`, `cursor?` |
 | `review_shelf` | Libro's review shelf: the open proposals, oldest first, with each one's reason, author, and a merge's draft and Libro's `support`; and `weeding`, the CREW/MUSTIE report: deprecated, broken links, orphans, blank records, `stale` (past `stale_after`), and circulation (never retrieved in `days` days, most retrieved). With no `kind`, also `missing`: this week's questions no concept answered and the files no concept cites yet, for the agent to fill (a question leaves once a search for it finds something; a file, once a concept cites it) | `kind?`, `limit?`, `days?` |
@@ -132,7 +132,7 @@ someone else's laptop.
 - **Its file.** A file's link is librocat's own (`/files/…` on the Convex
   deployment's site), signed, and lasts an hour or two: reading the source
   again gives a new one. A file over 16 MB comes as `download_parts`, links
-  to fetch in order and join. On librocat Cloud
+  to fetch in order and join. On librocat.com
   each fetch counts its bytes against the library's file transfer a month.
 - **When it changes.** Adding new text for a kept URL, or for an `id`,
   replaces the text (a file's own parts stay: add a picture's description
@@ -253,7 +253,7 @@ someone else's laptop.
   selected` (from the library's vocabulary), with the model in `by`. Older
   concepts may say `generated`, from before cataloging stopped writing. The
   entry goes when a writer changes that field.
-- **Body cap.** A concept body is at most 16 KB on librocat Cloud (64 KB
+- **Body cap.** A concept body is at most 16 KB on librocat.com (64 KB
   self-hosted); the error says "summarize, split, and link". Its catalog
   record (title, description, tags, sources) holds at most 4 KB, and it
   links to at most 200 concepts (16 KB and 1,000 self-hosted); the
@@ -262,11 +262,11 @@ someone else's laptop.
   `ingest` and `update` take it; anything else is refused before the tool
   runs. `search` and `list` filter on it.
 - **`status`** (the tool) reports `links`, `plan`, `max_concepts`,
-  and `index_credits`, and on librocat Cloud `monthly` (what's left of the
+  and `index_credits`, and on librocat.com `monthly` (what's left of the
   library's calls, writes, and file transfer a month).
 - **Rate limits.** Writes and searches are limited per library, per minute
   (Free 60, Individual 300, Team 600). Over the limit, the call says when to
-  try again. On librocat Cloud every call also counts against the library's
+  try again. On librocat.com every call also counts against the library's
   calls a month by what it reads: once, and once more per 256 KB past the
   first (docs/cloud.md).
 - **Bounded reads.** `search` returns at most 50 hits; a concept's `links`
@@ -288,7 +288,7 @@ someone else's laptop.
   record.
 - **Automatic indexation.** An `ingest`/`update` that leaves a concept
   without a description or tags schedules the cataloger (Libro), which spends
-  one of Libro's credits on librocat Cloud (see [pricing](https://librocat.com/#pricing))
+  one of Libro's credits on librocat.com (see [pricing](https://librocat.com/#pricing))
   when it fills something, and gives it back when it can pick nothing: that
   field stays blank for the agent to write.
 - **Errors** come back as a JSON `{"error": "..."}` tool result, never a crash.

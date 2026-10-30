@@ -1,5 +1,5 @@
 /**
- * librocat Cloud's limits (convex/limits.ts): search, by words, calling no
+ * librocat.com's limits (convex/limits.ts): search, by words, calling no
  * model on any plan, the calls a library may make a minute and a month, and
  * pay-as-you-go's monthly cap (model.ts spendCredits).
  *

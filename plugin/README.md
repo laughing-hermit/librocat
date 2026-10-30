@@ -99,7 +99,7 @@ from the repository, which brings the skills and the MCP together:
 
 ## A self-hosted librocat instead
 
-This plugin connects to librocat Cloud. For a librocat you self-host with
+This plugin connects to librocat.com. For a librocat you self-host with
 Docker (SELF_HOSTING.md), install the same server entry and skills with its
 URL:
 

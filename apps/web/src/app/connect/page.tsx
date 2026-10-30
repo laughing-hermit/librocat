@@ -13,7 +13,7 @@ export const metadata = {
 
 /**
  * Every way to connect, in public: the dashboard's Connect cards, at librocat
- * Cloud's address (the landing page's "See every way to connect").
+ * librocat.com's address (the landing page's "See every way to connect").
  */
 export default function PublicConnectPage() {
   // A self-hosted librocat has its own address, which its dashboard's Connect shows.

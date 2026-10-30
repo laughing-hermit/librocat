@@ -2,7 +2,7 @@
   "name": "@librocat/server",
   "private": true,
   "version": "0.0.0",
-  "description": "The MCP tool table (./tools) and the librocat version (./version) that the web app serves at /mcp, for librocat Cloud and a self-hosted librocat.",
+  "description": "The MCP tool table (./tools) and the librocat version (./version) that the web app serves at /mcp, for librocat.com and a self-hosted librocat.",
   "license": "Apache-2.0",
   "type": "module",
   "exports": {

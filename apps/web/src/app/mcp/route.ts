@@ -1,5 +1,5 @@
 /**
- * The MCP endpoint of librocat: https://librocat.com/mcp on librocat Cloud,
+ * The MCP endpoint of librocat: https://librocat.com/mcp on librocat.com,
  * and the same route on a self-hosted librocat.
  *
  * mcp-handler (Vercel) serves the official MCP SDK v2 over stateless
@@ -24,7 +24,7 @@ import { convexBackend } from "@/lib/mcp-backend";
 import { issuerOf, jwksUrl, resourceOf } from "@/lib/oauth";
 import { selfHost } from "@/lib/self-host";
 
-// This deployment's address when it names one, else librocat Cloud's.
+// This deployment's address when it names one, else librocat.com's.
 const SITE = process.env.NEXT_PUBLIC_LIBROCAT_MCP_URL
   ? new URL(process.env.NEXT_PUBLIC_LIBROCAT_MCP_URL).origin
   : "https://librocat.com";

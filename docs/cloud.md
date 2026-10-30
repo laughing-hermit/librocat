@@ -1,6 +1,6 @@
 # The hosted library
 
-librocat Cloud: the managed knowledge base, and the default way to use
+librocat.com: the managed knowledge base, and the default way to use
 librocat. A remote MCP endpoint on Vercel, backed by Convex. The same code
 self-hosts with Docker (SELF_HOSTING.md), the way Supabase does. The dashboard (Next.js on
 Vercel) is the control plane: billing, connected agents, the team,
@@ -49,7 +49,7 @@ export/delete, and read-only browsing.
   live in a third: every `ingest`, `update` (a move with `new_id` too), and
   automatic indexation appends a full snapshot, so `get_concept` with
   `history: true` is the workspace's commit log and any past revision is
-  readable (`revision`). Cloud needs no Git repo; export the OKF zip when you
+  readable (`revision`). librocat.com needs no Git repo; export the OKF zip when you
   want the files in one.
 - **The catalog index** (`facets`, `facetCounts`; `model.ts` facetsOf and
   reindexConcept): what each concept is filed under (type, status, tags,
@@ -214,7 +214,7 @@ file a person adds is read for credits (`convex/fileCatalog.ts`).
 
 Env on the Convex deployment: `AI_GATEWAY_API_KEY`, optional
 `AI_GATEWAY_API_KEY_FREE`, `LIBROCAT_EVAL_MODEL`, `LIBROCAT_AI_GATEWAY_URL`.
-That is librocat Cloud's pipeline, and its users don't choose the model. A
+That is librocat.com's pipeline, and its users don't choose the model. A
 self-hosted librocat brings its own System One (`convex/ai.ts`;
 SELF_HOSTING.md, "Models"): Jev through the gateway or from TypeSafe's own
 API (`TYPESAFE_API_KEY`), an open-source one on a server that speaks

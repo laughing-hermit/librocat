@@ -56,8 +56,22 @@ export async function teamLibraries(ctx: QueryCtx, home: Doc<"workspaces">) {
 
 /** Everyone in a team, each once: the members of its home and of every library it covers. */
 export async function teamPeople(ctx: QueryCtx, home: Doc<"workspaces">): Promise<Set<string>> {
+  return await peopleIn(ctx, await teamLibraries(ctx, home));
+}
+
+/**
+ * Everyone a Team bought for `ws` would have, each once: the people in it
+ * and in the libraries it would cover (syncCover), paused ones too
+ * (membership.ts pausedIn), since the Team brings them back.
+ */
+export async function peopleOfTeamAt(ctx: QueryCtx, ws: Doc<"workspaces">) {
+  const others = (await coverCandidates(ctx, ws)).slice(0, TEAM_LIBRARIES - 1);
+  return await peopleIn(ctx, [ws._id, ...others.map((w) => w._id)]);
+}
+
+async function peopleIn(ctx: QueryCtx, libraries: Id<"workspaces">[]): Promise<Set<string>> {
   const people = new Set<string>();
-  for (const id of await teamLibraries(ctx, home)) {
+  for (const id of libraries) {
     const members = await ctx.db
       .query("members")
       .withIndex("by_workspace", (q) => q.eq("workspaceId", id))
@@ -131,21 +145,8 @@ export async function syncCover(ctx: MutationCtx, homeId: Id<"workspaces">) {
     for (const w of covered) await uncover(ctx, w);
     return;
   }
-  const owned = await ctx.db
-    .query("workspaces")
-    .withIndex("by_owner", (q) => q.eq("ownerId", home.ownerId))
-    .collect();
   const room = TEAM_LIBRARIES - 1;
-  const candidates = owned
-    .filter((w) => w._id !== homeId && (w.coveredBy === homeId || !w.coveredBy))
-    // Another Team home of theirs keeps its own subscription.
-    .filter((w) => !(isTeamHome(w) && w.stripeSubscriptionId))
-    // Those it covers stay covered; then the oldest of the rest.
-    .sort(
-      (a, b) =>
-        Number(a.coveredBy !== homeId) - Number(b.coveredBy !== homeId) ||
-        a._creationTime - b._creationTime,
-    );
+  const candidates = await coverCandidates(ctx, home);
   const join = candidates.slice(0, room);
   // Never more than TEAM_LIBRARIES in all.
   for (const w of candidates.slice(room)) if (w.coveredBy === homeId) await uncover(ctx, w);
@@ -158,6 +159,26 @@ export async function syncCover(ctx: MutationCtx, homeId: Id<"workspaces">) {
     }
     await ctx.db.patch(w._id, coveredFields(home));
   }
+}
+
+/** The owner's other libraries a Team at `home` covers, in turn: those it covers, then the oldest. */
+async function coverCandidates(ctx: QueryCtx, home: Doc<"workspaces">) {
+  const owned = await ctx.db
+    .query("workspaces")
+    .withIndex("by_owner", (q) => q.eq("ownerId", home.ownerId))
+    .collect();
+  return (
+    owned
+      .filter((w) => w._id !== home._id && (w.coveredBy === home._id || !w.coveredBy))
+      // Another Team home of theirs keeps its own subscription.
+      .filter((w) => !(isTeamHome(w) && w.stripeSubscriptionId))
+      // Those it covers stay covered; then the oldest of the rest.
+      .sort(
+        (a, b) =>
+          Number(a.coveredBy !== home._id) - Number(b.coveredBy !== home._id) ||
+          a._creationTime - b._creationTime,
+      )
+  );
 }
 
 /** A library its Team no longer covers: back to Free, everything in it kept. */

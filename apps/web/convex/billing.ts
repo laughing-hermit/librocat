@@ -10,7 +10,7 @@ import { authComponent } from "./auth";
 import { sendEmail } from "./email";
 import { currentWorkspaceForUserId, pausedIn } from "./membership";
 import { indexCreditsOf } from "./model";
-import { payerOf, syncCover, teamHomeOf, teamPeople } from "./teamCover";
+import { payerOf, peopleOfTeamAt, syncCover, teamHomeOf, teamPeople } from "./teamCover";
 
 /** The Stripe customer a library's pay-as-you-go bills: its Team's, when a Team covers it (teamCover.ts). */
 export const customerOf = internalQuery({
@@ -57,7 +57,8 @@ export const seatsContext = internalQuery({
     const home = await teamHomeOf(ctx, ws);
     return {
       ws,
-      members: home ? (await teamPeople(ctx, home)).size : members.length,
+      // Not on a Team: everyone a Team bought here would bring back, across its libraries.
+      members: (home ? await teamPeople(ctx, home) : await peopleOfTeamAt(ctx, ws)).size,
       admin: me?.role === "admin" || ws.ownerId === userId,
       billedWith: ws.coveredBy && home ? home.name : null,
     };

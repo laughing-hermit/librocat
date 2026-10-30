@@ -971,7 +971,7 @@ run(
   "a Team covers its owner's libraries: one bill, seats once, shared limits, and Free when it ends",
   async () => {
     const owner = new ConvexHttpClient(url as string);
-    signIn(owner, "cover-owner");
+    const { userId: ownerId } = signIn(owner, "cover-owner");
     const home = await owner.mutation(api.workspaces.ensure, {});
     // Individual first, so a second library can be made, with a concept in each.
     runDev("dev:setPlan", { workspaceId: home, plan: "individual" });
@@ -1035,7 +1035,7 @@ run(
     signIn(third3, "cover-third");
     await person(third3).mutation(api.team.accept, { code: homeCode });
     const fourth = new ConvexHttpClient(url as string);
-    signIn(fourth, "cover-fourth");
+    const { userId: fourthId } = signIn(fourth, "cover-fourth");
     await expect(person(fourth).mutation(api.team.accept, { code: secondCode })).rejects.toThrow(
       /no free seat \(3 on its plan\)/,
     );
@@ -1090,6 +1090,10 @@ run(
     const kept = await owner.query(api.team.overview, {});
     expect(kept.members.filter((m) => m.paused).length).toBe(2);
     expect(kept.members.find((m) => m.owner)?.paused).toBe(false);
+    // Team bought again brings back everyone in the libraries it covers, so
+    // Checkout's seats start at all of them: four here, though this one has three.
+    runDev("dev:addMember", { workspaceId: second.id, userId: fourthId });
+    expect(runDevJson("billing:seatsContext", { userId: ownerId }).members).toBe(4);
 
     // Team again brings everyone back, with their roles.
     runDev("billing:setStatus", { workspaceId: home, status: "active", plan: "team" });

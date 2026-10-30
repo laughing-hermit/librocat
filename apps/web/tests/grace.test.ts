@@ -2,7 +2,15 @@
 
 import { describe, expect, test } from "vitest";
 import type { Doc, Id } from "../convex/_generated/dataModel";
-import { graceEmail, KEEP_DAYS, keptOf, overFree, overWords, PAUSE_DAYS } from "../convex/grace";
+import {
+  deleteDate,
+  graceEmail,
+  KEEP_DAYS,
+  keptOf,
+  overFree,
+  overWords,
+  PAUSE_DAYS,
+} from "../convex/grace";
 
 const library = (id: string, conceptCount: number, created: number, pausedAt?: number) =>
   ({
@@ -91,5 +99,24 @@ describe("graceEmail", () => {
     expect(last.text).toMatch(
       /^On October 30, 2027, what's still over Free's limits in your libraries is deleted: what changed least recently in Acme Docs, until it fits\./,
     );
+  });
+});
+
+describe("deleteDate", () => {
+  const day = 86_400_000;
+  const due = Date.UTC(2027, 9, 30);
+
+  test("a warning on time keeps the date", () => {
+    expect(deleteDate("soon", due, due - 30 * day)).toBe(due);
+    expect(deleteDate("last", due, due - 7 * day)).toBe(due);
+  });
+
+  test("a late warning moves it: 30 days after the first, 7 after the second", () => {
+    expect(deleteDate("soon", due, due - 2 * day)).toBe(due + 28 * day);
+    expect(deleteDate("last", due, due)).toBe(due + 7 * day);
+  });
+
+  test("the first email, when the plan ends, never moves it", () => {
+    expect(deleteDate("start", due, due + 5 * day)).toBe(due);
   });
 });

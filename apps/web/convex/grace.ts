@@ -46,6 +46,15 @@ const KEEP_MS = KEEP_DAYS * DAY;
 /** The emails before anything is deleted: this long before. */
 const WARNINGS = { soon: 30 * DAY, last: 7 * DAY } as const;
 
+/**
+ * When what's still over is deleted, as a warning sent `now` announces it:
+ * never sooner than 30 days after the first (`soon`) or 7 after the second
+ * (`last`), so a late or retried warning moves the date out. Pure.
+ */
+export function deleteDate(kind: "start" | "soon" | "last", deleteAt: number, now: number) {
+  return kind === "start" ? deleteAt : Math.max(deleteAt, now + WARNINGS[kind]);
+}
+
 const siteUrl = () => (process.env.SITE_URL ?? "https://librocat.com").replace(/\/$/, "");
 
 type Usage = Pick<
@@ -128,8 +137,9 @@ export async function startGrace(ctx: MutationCtx, ownerId: string) {
   const keep = work.kept[0]?._id;
   const row = await graceOf(ctx, ownerId);
   if (row?.since === since) return;
-  if (row) await ctx.db.patch(row._id, { since, keep });
-  else await ctx.db.insert("graces", { ownerId, since, keep });
+  const deleteAt = since + KEEP_MS;
+  if (row) await ctx.db.patch(row._id, { since, keep, deleteAt, warned: undefined });
+  else await ctx.db.insert("graces", { ownerId, since, keep, deleteAt });
   const at = { ownerId, since };
   await ctx.scheduler.runAfter(0, internal.grace.notify, { ...at, kind: "start" });
   await ctx.scheduler.runAfter(PAUSE_MS, internal.grace.pause, at);
@@ -179,7 +189,7 @@ export async function graceFor(ctx: QueryCtx, ws: Doc<"workspaces">) {
   return {
     pausesAt: row.since + PAUSE_MS,
     paused: ws.pausedAt !== undefined,
-    deletesAt: row.since + KEEP_MS,
+    deletesAt: row.deleteAt ?? row.since + KEEP_MS,
     extra,
     kept: work.kept[0]?.name ?? null,
     over,
@@ -288,12 +298,14 @@ export const notice = internalQuery({
     if (!work.any) return null;
     const user = await authComponent.getAnyUserById(ctx, ownerId);
     if (!user?.email) return null;
+    const deletesAt = deleteDate(kind, row.deleteAt ?? since + KEEP_MS, Date.now());
     return {
       to: user.email,
+      deletesAt,
       ...graceEmail({
         kind,
         pausesAt: since + PAUSE_MS,
-        deletesAt: since + KEEP_MS,
+        deletesAt,
         over: work.over.map(({ ws, over }) => ({ name: ws.name, over })),
         kept: work.kept[0]?.name ?? null,
         extra: work.extra.map((w) => w.name),
@@ -304,21 +316,50 @@ export const notice = internalQuery({
   },
 });
 
-/** Email the owner (startGrace schedules each). */
+/** Tries a warning gets, an hour apart, before it waits for the grace's end to send it again. */
+const NOTIFY_TRIES = 5;
+
+/**
+ * Email the owner (startGrace schedules each), and record it once it's
+ * sent: nothing is deleted until both warnings are (expire). A failure is
+ * tried again, an hour later.
+ */
 export const notify = internalAction({
-  args: { ownerId: v.string(), since: v.number(), kind },
+  args: { ownerId: v.string(), since: v.number(), kind, attempt: v.optional(v.number()) },
   returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    const email = await ctx.runQuery(internal.grace.notice, args);
-    if (!email) return null;
+  handler: async (ctx, { attempt = 1, ...args }): Promise<null> => {
+    const notice = await ctx.runQuery(internal.grace.notice, args);
+    if (!notice) return null;
+    const { deletesAt, ...email } = notice;
     try {
       await sendEmail(email);
     } catch (exc) {
       const error = exc instanceof Error ? exc.message : String(exc);
-      console.warn(
-        JSON.stringify({ graceNotice: { ownerId: args.ownerId, kind: args.kind, error } }),
-      );
+      console.warn(JSON.stringify({ graceNotice: { ...args, attempt, error } }));
+      if (attempt < NOTIFY_TRIES) {
+        await ctx.scheduler.runAfter(60 * 60_000, internal.grace.notify, {
+          ...args,
+          attempt: attempt + 1,
+        });
+      }
+      return null;
     }
+    await ctx.runMutation(internal.grace.sent, { ...args, deletesAt });
+    return null;
+  },
+});
+
+/** A warning went out: when, and the date it announced, which the deletion keeps to. */
+export const sent = internalMutation({
+  args: { ownerId: v.string(), since: v.number(), kind, deletesAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, { ownerId, since, kind, deletesAt }) => {
+    const row = await graceOf(ctx, ownerId);
+    if (row?.since !== since) return null;
+    await ctx.db.patch(row._id, {
+      warned: { ...row.warned, [kind]: Date.now() },
+      deleteAt: Math.max(row.deleteAt ?? since + KEEP_MS, deletesAt),
+    });
     return null;
   },
 });
@@ -342,7 +383,12 @@ export const pause = internalMutation({
   },
 });
 
-/** Month 12: what's still over Free's limits goes, unless a later start replaced this grace. */
+/**
+ * Month 12: what's still over Free's limits goes, unless a later start
+ * replaced this grace. Never before both warnings were sent, 30 and 7 days
+ * ahead (the Terms): a missing one goes out now, and the deletion waits for
+ * its date.
+ */
 export const expire = internalMutation({
   args: { ownerId: v.string(), since: v.number() },
   returns: v.null(),
@@ -350,6 +396,29 @@ export const expire = internalMutation({
     const row = await graceOf(ctx, ownerId);
     if (row?.since !== since) return null;
     const work = await graceWork(ctx, ownerId, row.keep);
+    const at = { ownerId, since };
+    if (work.any) {
+      const { soon, last } = row.warned ?? {};
+      if (soon === undefined) {
+        await ctx.scheduler.runAfter(0, internal.grace.notify, { ...at, kind: "soon" });
+        await ctx.scheduler.runAfter(WARNINGS.soon - WARNINGS.last, internal.grace.notify, {
+          ...at,
+          kind: "last",
+        });
+        await ctx.scheduler.runAfter(WARNINGS.soon, internal.grace.expire, at);
+        return null;
+      }
+      if (last === undefined) {
+        await ctx.scheduler.runAfter(0, internal.grace.notify, { ...at, kind: "last" });
+        await ctx.scheduler.runAfter(WARNINGS.last, internal.grace.expire, at);
+        return null;
+      }
+      const deleteAt = row.deleteAt ?? since + KEEP_MS;
+      if (Date.now() < deleteAt) {
+        await ctx.scheduler.runAfter(deleteAt - Date.now(), internal.grace.expire, at);
+        return null;
+      }
+    }
     await ctx.db.delete(row._id);
     for (const ws of work.extra) await removeLibrary(ctx, ws);
     for (const { ws } of work.over) {

@@ -712,7 +712,9 @@ come to at most about $0.06 of model time a month.
   or room on Free, brings one back. 12 months on, what's still paused or
   over Free's limits goes: the paused libraries, then what changed least
   recently in the one kept (`convex/graceTrim.ts`, a page at a time). Emails
-  go when the plan ends and 30 and 7 days before the deletion; a banner on
+  go when the plan ends and 30 and 7 days before the deletion, which waits
+  until both warnings are recorded as sent (a late one moves its date out);
+  a banner on
   each library concerned says the dates. Libro's reviews, reports, and
   waiting cataloging skip a paused library. Only a Team
   shares a library: on any other plan its other members are paused

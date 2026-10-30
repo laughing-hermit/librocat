@@ -22,7 +22,7 @@ export const site = {
   jurisdiction: "the State of Delaware, USA",
   // The date at the top of Terms, Privacy, Security, and Disclaimer. Change it
   // whenever one of them changes.
-  legalUpdated: "October 29, 2026",
+  legalUpdated: "October 30, 2026",
   productLine: "librocat is a Laughing Hermit, Inc. product.",
   // The one-line footer/disclaimer truth: what this is at its core.
   atItsCore:

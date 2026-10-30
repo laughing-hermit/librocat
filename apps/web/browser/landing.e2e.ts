@@ -11,7 +11,7 @@ test("the landing page says what librocat is and how to start", async ({ app, sc
   // The product, in pictures: a team's library under the hero.
   await expect(screen.getByRole("img", /^A team's library on Needs you/)).toBeVisible();
   // The coding agents, the way in: one tab each.
-  await expect(screen.getByText(/Codex, Cursor, and Copilot share one library/)).toBeVisible();
+  await expect(screen.getByText(/Codex, Cursor, and Copilot all share one library/)).toBeVisible();
   await expect(screen.getByText("/plugin install librocat@librocat")).toBeVisible();
   await screen.getByRole("tab", "Codex").tap();
   await expect(screen.getByText("codex plugin add librocat@librocat")).toBeVisible();

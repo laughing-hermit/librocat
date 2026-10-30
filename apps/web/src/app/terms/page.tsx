@@ -38,7 +38,7 @@ const sections = [
   },
   {
     title: "Your content",
-    body: "What you store stays yours. You give us only the rights needed to host, copy, convert, index, catalog, and serve it to you, your team, and the agents you approve, to back it up, and to have the providers the privacy page names process it for that. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do, unless the law forbids it. If something in Cloud infringes your copyright, write to us with the details the law asks for (17 U.S.C. § 512(c)(3)), and we remove it; we close the accounts of repeat infringers.",
+    body: "What you store stays yours. You give us only the rights needed to host, copy, convert, index, catalog, and serve it to you, your team, and the agents you approve, to back it up, and to have the providers the privacy page names process it for that. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do, unless the law forbids it. If something in Cloud infringes your copyright, send the details the law asks for (17 U.S.C. § 512(c)(3)) to our designated agent: Copyright Agent, Laughing Hermit, Inc., 1111B S Governors Ave # 46301, Dover, DE 19904, USA; +1 787-325-8664; support@librocat.com. We remove it, and we close the accounts of repeat infringers.",
   },
   {
     title: "Acceptable use",

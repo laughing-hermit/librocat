@@ -238,7 +238,7 @@ export const riskReversal =
 // (README "concepts"), what an index credit buys (convex/model.ts
 // INDEX_CREDITS), and that pay-as-you-go is opt-in and capped.
 export const unitsNote =
-  "A concept is one thing your agents saved: a note or a decision. Libro's credits pay for its work: one catalogs a concept that lacks a description or tags, and one reads about three pages of a file you add (files use at most half). Pay-as-you-go past your plan's credits is off until you turn it on, and stops at a cap you set.";
+  "A concept is one thing your agents save, like a note or a decision. Libro's credits pay for its work: one credit catalogs a concept that's missing a description or tags, or reads about three pages of a file you add (files use at most half your credits). Pay-as-you-go beyond your plan's credits stays off until you turn it on, and stops at a monthly cap you set.";
 
 // Prices and tax, stated under the pricing grid and in Billing. Checkout sells
 // through Stripe's Managed Payments, where Link is the merchant of record and

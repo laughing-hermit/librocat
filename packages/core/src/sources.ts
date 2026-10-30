@@ -365,7 +365,7 @@ const VIDEO_EXT = new Set("mp4 m4v mov webm mkv avi wmv mpg mpeg 3gp ogv".split(
 /**
  * What kind of file a refused one was, and nothing more: audio, video, or
  * anything else, by its type or, when that says nothing, its extension.
- * librocat Cloud counts refusals by this alone, to learn whether people want
+ * librocat.com counts refusals by this alone, to learn whether people want
  * recordings kept.
  */
 export function refusalKind(mime: string, filename = ""): "audio" | "video" | "other" {

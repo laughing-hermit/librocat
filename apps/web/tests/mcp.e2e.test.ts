@@ -113,7 +113,7 @@ runDiscovery("an agent without a token is sent through OAuth discovery", async (
 });
 
 run(
-  "the Cloud tool surface works end to end over Streamable HTTP",
+  "the hosted tool surface works end to end over Streamable HTTP",
   async () => {
     const client = await connect(token as string);
     expect(client.getServerVersion()?.name).toBe("librocat");
@@ -246,7 +246,7 @@ run(
     expect(Array.isArray(weed.never_retrieved)).toBe(true);
     expect(weed.never_retrieved).not.toContain(c); // too young to count as never retrieved
     expect(weed.most_retrieved.some((m: { id: string }) => m.id === a)).toBe(true);
-    // Cloud guards: reserved thesaurus id, canonical ids, missing supersession target.
+    // The hosted guards: reserved thesaurus id, canonical ids, missing supersession target.
     expect((await call(client, "ingest", { type: "Note", id: "thesaurus" })).error).toContain(
       "thesaurus",
     );

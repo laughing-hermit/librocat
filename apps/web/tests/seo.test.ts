@@ -1,4 +1,4 @@
-/** What search engines and AI assistants are told about librocat Cloud's pages. */
+/** What search engines and AI assistants are told about librocat.com's pages. */
 import { afterEach, expect, test, vi } from "vitest";
 
 afterEach(() => {
@@ -6,7 +6,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("librocat Cloud lets crawlers read its public pages, and lists them", async () => {
+test("librocat.com lets crawlers read its public pages, and lists them", async () => {
   const robots = (await import("../src/app/robots")).default();
   expect(robots.rules).toEqual({
     userAgent: "*",

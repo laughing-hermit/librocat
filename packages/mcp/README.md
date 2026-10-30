@@ -1,7 +1,7 @@
 # @librocat/server
 
 The MCP tool table and the librocat version (internal workspace package,
-never published). The web app serves both at `/mcp`, for librocat Cloud and a
+never published). The web app serves both at `/mcp`, for librocat.com and a
 self-hosted librocat.
 
 - `src/tools.ts`: the tool table, defined once; the `/mcp` route imports it as

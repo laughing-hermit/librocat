@@ -28,7 +28,7 @@ test("Connect shows the MCP address and the commands", async ({ app, screen, bro
   await expect(screen.getByText(/adds librocat from Connect apps/)).toBeVisible();
   // Every agent at once, by package manager: the plugin, else MCP + Skills.
   await expect(screen.getByText("npx plugins add laughing-hermit/librocat")).toBeVisible();
-  // The plain address: librocat.com on Cloud, the local site here.
+  // The plain address: librocat.com when hosted, the local site here.
   await expect(screen.getByText(/npx add-mcp \S+\/mcp --name librocat -g/)).toBeVisible();
   await screen.getByRole("tab", "pnpm").tap();
   await expect(screen.getByText("pnpm dlx plugins add laughing-hermit/librocat")).toBeVisible();

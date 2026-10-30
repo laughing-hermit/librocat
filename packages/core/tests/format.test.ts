@@ -1,6 +1,6 @@
 /**
  * The pure core, `@librocat/core/format`: the one implementation both tiers
- * run. These tests are the contract Cloud inherits, so a Convex row and an
+ * run. These tests are the contract librocat.com inherits, so a Convex row and an
  * OKF file behave the same.
  */
 
@@ -90,7 +90,7 @@ describe("ids", () => {
     await expect(deriveConceptId({ type: "Note", id: "thesaurus" }, exists)).rejects.toThrow(
       /thesaurus/,
     );
-    // An async `exists` (Cloud) works the same.
+    // An async `exists` (librocat.com) works the same.
     expect(
       await deriveConceptId({ type: "Note", title: "Hello" }, async (id) => taken.has(id)),
     ).toBe("hello-3");

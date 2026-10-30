@@ -37,7 +37,7 @@ export default async function ConnectPage({
     getAgents(),
     searchParams,
   ]);
-  // The agents' plugins connect librocat.com/mcp: Cloud's, not a self-hosted site's.
+  // The agents' plugins connect librocat.com/mcp: librocat.com's, not a self-hosted site's.
   const cloud = !selfHost;
   // Yours first, then your teammates', each last used first (agents.list);
   // oldest first reverses each, so yours still lead.

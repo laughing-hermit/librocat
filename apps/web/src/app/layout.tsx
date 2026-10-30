@@ -54,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster />
-        {/* librocat Cloud only: elsewhere (self-hosted, local) there is nothing to report to. */}
+        {/* librocat.com only: elsewhere (self-hosted, local) there is nothing to report to. */}
         {process.env.VERCEL === "1" && <SiteAnalytics />}
       </body>
     </html>

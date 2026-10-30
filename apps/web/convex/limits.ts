@@ -1,5 +1,5 @@
 /**
- * Every plan's ceilings on what costs librocat Cloud money, so no library can
+ * Every plan's ceilings on what costs librocat.com money, so no library can
  * cost more than its plan brings in (BLOCKER, "Is librocat profitable?").
  * Token buckets keyed by library (@convex-dev/rate-limiter); the monthly ones
  * refill over 30 days, day by day, so a library never waits for a calendar

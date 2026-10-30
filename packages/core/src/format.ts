@@ -604,7 +604,7 @@ export function markVerified(
  * The mechanical CREW/MUSTIE rules: deprecated, broken links, orphans (no
  * inbound link), no description, no tags. The thesaurus is skipped, ids are
  * sorted, counts are taken before `limit` cuts each list. Circulation (never
- * retrieved, most retrieved) is Cloud-only and added by the caller.
+ * retrieved, most retrieved) is librocat.com's alone and added by the caller.
  */
 export function weedRules(rows: WeedRow[], limit = 50, now = Date.now()) {
   const ids = new Set(rows.map((r) => r.id));

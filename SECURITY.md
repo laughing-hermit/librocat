@@ -22,7 +22,7 @@ third-party service (Vercel, Convex, Stripe). Report those to the provider.
 
 ## Supported versions
 
-librocat Cloud as deployed, and `main` for self-hosting. Older commits get
+librocat.com as deployed, and `main` for self-hosting. Older commits get
 no security fixes.
 
 ## Installing

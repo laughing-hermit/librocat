@@ -5,20 +5,20 @@ import { site } from "@/lib/site";
 export const metadata = {
   title: "Terms | librocat",
   description:
-    "The terms of service for librocat Cloud: the plans, fair use, payment through Stripe's Managed Payments, and your rights to your data.",
+    "The terms of service for librocat: the plans, fair use, payment through Stripe's Managed Payments, and your rights to your data.",
   alternates: { canonical: "/terms" },
 };
 
-// Plain-language terms for librocat Cloud, the hosted service. The code is
+// Plain-language terms for librocat, the hosted service at librocat.com. The code is
 // Apache-2.0, and that license governs the code.
 const sections = [
   {
     title: "The deal",
-    body: `librocat Cloud is a hosted knowledge base for AI agents, operated by ${site.company}, a Delaware corporation ("we", "us"). It stores your library (the concepts, sources, and files you and your agents add) and serves it to your agents over MCP. These terms are an agreement between you and us. By creating an account or using Cloud you accept them. If you use Cloud for an organization, you accept them for that organization and confirm that you may.`,
+    body: `librocat, at librocat.com, is a hosted knowledge base for AI agents, operated by ${site.company}, a Delaware corporation ("we", "us"). It stores your library (the concepts, sources, and files you and your agents add) and serves it to your agents over MCP. These terms are an agreement between you and us. By creating an account or using librocat you accept them. If you use librocat for an organization, you accept them for that organization and confirm that you may.`,
   },
   {
     title: "Your account",
-    body: `You need an account to use Cloud. You must be at least 16, and old enough to enter a contract where you live. You may not use Cloud from a country under US embargo, or if you are on a US sanctions list. Use a real email address, keep your password and sign-in codes secret, and tell us at ${site.contact} if someone else got in. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page when you no longer trust it.`,
+    body: `You need an account to use librocat. You must be at least 16, and old enough to enter a contract where you live. You may not use librocat from a country under US embargo, or if you are on a US sanctions list. Use a real email address, keep your password and sign-in codes secret, and tell us at ${site.contact} if someone else got in. Anything done with your account, or by an agent you approved, is on your account. Disconnect an agent on the Connect page when you no longer trust it.`,
   },
   {
     title: "Plans and limits",
@@ -38,11 +38,11 @@ const sections = [
   },
   {
     title: "Your content",
-    body: "What you store stays yours. You give us only the rights needed to host, copy, convert, index, catalog, and serve it to you, your team, and the agents you approve, to back it up, and to have the providers the privacy page names process it for that. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do, unless the law forbids it. If something in Cloud infringes your copyright, send the details the law asks for (17 U.S.C. § 512(c)(3)) to our designated agent: Copyright Agent, Laughing Hermit, Inc., 1111B S Governors Ave # 46301, Dover, DE 19904, USA; +1 787-325-8664; support@librocat.com. We remove it, and we close the accounts of repeat infringers.",
+    body: "What you store stays yours. You give us only the rights needed to host, copy, convert, index, catalog, and serve it to you, your team, and the agents you approve, to back it up, and to have the providers the privacy page names process it for that. You are responsible for your content, and you must have the right to store it. We open it only as the privacy and security pages describe. We can remove content that breaks the law or these terms, and we tell you when we do, unless the law forbids it. If something in librocat infringes your copyright, send the details the law asks for (17 U.S.C. § 512(c)(3)) to our designated agent: Copyright Agent, Laughing Hermit, Inc., 1111B S Governors Ave # 46301, Dover, DE 19904, USA; +1 787-325-8664; support@librocat.com. We remove it, and we close the accounts of repeat infringers.",
   },
   {
     title: "Acceptable use",
-    body: "Do not use Cloud to break the law or infringe anyone's rights; to store malware, or other people's personal data without a lawful basis; to store secrets such as passwords and private keys (librocat refuses keys and tokens in the formats it recognizes); to store payment card numbers, health information covered by HIPAA, or other specially regulated data; to attack, probe, or overload the service or its users; to work around its quotas, for example with many Free accounts; or to resell access to it as your own service. The software is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service.",
+    body: "Do not use librocat to break the law or infringe anyone's rights; to store malware, or other people's personal data without a lawful basis; to store secrets such as passwords and private keys (librocat refuses keys and tokens in the formats it recognizes); to store payment card numbers, health information covered by HIPAA, or other specially regulated data; to attack, probe, or overload the service or its users; to work around its quotas, for example with many Free accounts; or to resell access to it as your own service. The software is open source: the Apache-2.0 license governs the code, and these terms govern the hosted service.",
   },
   {
     title: "Models and agents",
@@ -50,7 +50,7 @@ const sections = [
   },
   {
     title: "Availability and changes",
-    body: `We work to keep Cloud available, but we do not promise uptime (${site.status.replace("https://", "")} shows how it runs), and we may change or retire features. We email you about material changes to prices or these terms at least 30 days before they take effect; other changes apply when we post them here, with a new date at the top. If you disagree with a change, cancel and export your library before it takes effect. If we shut Cloud down, we email you at least 30 days before, so you can export.`,
+    body: `We work to keep librocat available, but we do not promise uptime (${site.status.replace("https://", "")} shows how it runs), and we may change or retire features. We email you about material changes to prices or these terms at least 30 days before they take effect; other changes apply when we post them here, with a new date at the top. If you disagree with a change, cancel and export your library before it takes effect. If we shut librocat down, we email you at least 30 days before, so you can export.`,
   },
   {
     title: "Ending",
@@ -58,15 +58,15 @@ const sections = [
   },
   {
     title: "Warranty",
-    body: 'Cloud is provided "as is" and "as available". To the extent the law allows, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.',
+    body: 'librocat is provided "as is" and "as available". To the extent the law allows, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.',
   },
   {
     title: "Liability",
-    body: "To the extent the law allows, we are not liable for indirect, incidental, special, or consequential losses, or for lost profits, revenue, data, or goodwill, including losses from decisions made by you, your team, or your agents. Our total liability for all claims about Cloud is limited to what you paid for Cloud in the twelve months before the claim arose, or US$100, whichever is more.",
+    body: "To the extent the law allows, we are not liable for indirect, incidental, special, or consequential losses, or for lost profits, revenue, data, or goodwill, including losses from decisions made by you, your team, or your agents. Our total liability for all claims about librocat is limited to what you paid for librocat in the twelve months before the claim arose, or US$100, whichever is more.",
   },
   {
     title: "Indemnity",
-    body: "If you use Cloud for a business, you will defend us against, and cover our losses from, claims by others that arise from your content, from what your agents do, or from your breaking these terms.",
+    body: "If you use librocat for a business, you will defend us against, and cover our losses from, claims by others that arise from your content, from what your agents do, or from your breaking these terms.",
   },
   {
     title: "Law and disputes",
@@ -74,7 +74,7 @@ const sections = [
   },
   {
     title: "General",
-    body: "These terms, with the pricing at librocat.com/#pricing and the privacy page, are the whole agreement about Cloud. If a part cannot be enforced, the rest still applies. Not enforcing a part is not a waiver of it. We are not responsible for failures caused by events beyond our reasonable control, including outages of the providers we rely on. You may not transfer your account without our consent. We may transfer these terms to whoever takes over the service, and we will tell you if we do.",
+    body: "These terms, with the pricing at librocat.com/#pricing and the privacy page, are the whole agreement about librocat. If a part cannot be enforced, the rest still applies. Not enforcing a part is not a waiver of it. We are not responsible for failures caused by events beyond our reasonable control, including outages of the providers we rely on. You may not transfer your account without our consent. We may transfer these terms to whoever takes over the service, and we will tell you if we do.",
   },
   {
     title: "Contact",
@@ -86,7 +86,7 @@ export default function TermsPage() {
   return (
     <SitePage
       title="Terms of service"
-      lede={`Plain language, for librocat Cloud. Last updated ${site.legalUpdated}.`}
+      lede={`Plain language, for librocat. Last updated ${site.legalUpdated}.`}
     >
       {sections.map((s) => (
         <Card key={s.title}>

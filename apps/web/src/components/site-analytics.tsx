@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import { countedPath, countedUrl } from "@/lib/analytics";
 
 /**
- * Vercel Web Analytics on librocat Cloud (app/layout.tsx), with no cookie: a
+ * Vercel Web Analytics on librocat.com (app/layout.tsx), with no cookie: a
  * page view for every page, sent by route, and the events lib/analytics.ts
  * names. Speed Insights measures how fast each route loads and responds for
  * real visitors, on the free tier that comes with every Vercel plan (not

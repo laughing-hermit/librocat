@@ -96,11 +96,15 @@ const BENEFITS = [
 const FAQ: { q: string; a: string; table?: boolean }[] = [
   {
     q: "What is librocat?",
-    a: "librocat is an open-source knowledge base that all your AI agents, and everyone on your team, share. Tell one agent once, and every agent knows it. Libro, an AI librarian, keeps it organized and current. Free to start on librocat Cloud, and free to self-host.",
+    a: "librocat is an open-source knowledge base that all your AI agents, and everyone on your team, share. Tell one agent once, and every agent knows it. Libro, an AI librarian, keeps it organized and current. Free to start at librocat.com, and free to self-host.",
   },
   {
     q: "Which agents does it work with?",
     a: `Coding and desktop agents, and any agent with Agent Plugins or MCP + Agent Skills (not web chat). Claude Code, Codex, Cursor, and GitHub Copilot each install it with one or two commands, at the top of this page. Every other agent on your computer at once: with Agent Plugins, ${PLUGINS_COMMAND}; without them, MCP + Skills, both on the Connect page. Desktop agents install the same plugin: Claude Desktop and Cowork today, the ChatGPT desktop app through a workspace admin (or its MCP alone without one), and Grok Bot through a Cursor Teams admin. Each agent signs in once in your browser and picks its library; there are no API keys.`,
+  },
+  {
+    q: "Can my whole team share one library?",
+    a: "Yes, on the Team plan. Each teammate connects their own agent to the same library: two of you on Claude Code and one on Cursor, everyone on the same agent, or any mix. What one agent saves, every teammate's agent finds. Each person signs in as themselves, as an Admin, an Editor, or a Reader.",
   },
   {
     q: "How is this different from agent memory or a vector database?",
@@ -125,7 +129,7 @@ const FAQ: { q: string; a: string; table?: boolean }[] = [
   },
   {
     q: "Is it open source? Can I host it myself?",
-    a: "Yes, all of it, under Apache-2.0, including the code behind librocat Cloud. Run it with Docker on your own server, free and with no limits, and move a library between the two with Export and Import.",
+    a: "Yes, all of it, under Apache-2.0, including the code behind librocat.com. Run it with Docker on your own server, free and with no limits, and move a library between the two with Export and Import.",
   },
 ];
 
@@ -249,7 +253,7 @@ export default function Home() {
             <CodingTabs className="mt-10 w-full max-w-xl" />
             <p className="mt-3 text-sm text-muted-foreground">
               {comingSoon
-                ? "librocat Cloud opens soon. Self-hosting works today."
+                ? "librocat opens soon. Self-hosting works today."
                 : "Installs in a minute. No API keys. Free up to 1,000 concepts."}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">

@@ -1,5 +1,5 @@
 /**
- * Where model calls go (convex/ai.ts): librocat Cloud's fixed pipeline, and a
+ * Where model calls go (convex/ai.ts): librocat.com's fixed pipeline, and a
  * self-hosted librocat's choice of Jev: through the gateway, from TypeSafe,
  * from a server of its own, or not at all. Jev is the one model: there is no
  * writing model (the writing is the person's own agent's), and search calls
@@ -42,7 +42,7 @@ afterEach(() => {
   }
 });
 
-describe("librocat Cloud", () => {
+describe("librocat.com", () => {
   test("Jev goes through the gateway", () => {
     expect(resolve("eval")).toBeNull();
     process.env.AI_GATEWAY_API_KEY = "k";
@@ -64,7 +64,7 @@ describe("librocat Cloud", () => {
     expect(resolve("eval")?.key).toBe("paid");
   });
 
-  test("a self-host setting changes nothing on Cloud: its users don't choose models", () => {
+  test("a self-host setting changes nothing on librocat.com: its users don't choose models", () => {
     process.env.AI_GATEWAY_API_KEY = "k";
     process.env.TYPESAFE_API_KEY = "ts";
     process.env.LIBROCAT_JEV_URL = "http://systemone:8000/v1";

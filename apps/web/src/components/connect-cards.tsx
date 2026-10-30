@@ -21,7 +21,7 @@ const TRIGGER = "h-auto after:hidden";
 /**
  * Connect's ways in (site.ts): the four coding agents and the desktop
  * agents, each installing librocat's plugin its own way, then every agent
- * at once with a package manager. `cloud`: librocat Cloud, which the
+ * at once with a package manager. `cloud`: librocat.com, which the
  * plugins reach, every library of it (the agent's person picks one when it
  * signs in). A self-hosted librocat connects at its own address instead,
  * with MCP + Skills.
@@ -58,7 +58,7 @@ export function CodingTabs({ className }: { className?: string }) {
   );
 }
 
-/** The four coding agents, each installing the plugin its own way (librocat Cloud). */
+/** The four coding agents, each installing the plugin its own way (librocat.com). */
 export function CodingAgentsCard({ where = "connect" }: { where?: Where }) {
   return (
     <Section title={connectPage.coding.title} description={connectPage.coding.description}>

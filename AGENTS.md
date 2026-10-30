@@ -30,7 +30,7 @@ this file keeps what an agent tends to forget.
   (`refresh-while.tsx`, backing off and stopping), the proxy matches only
   the pages it guards, and a page reads each thing once. Keep it that way.
 
-## Running librocat Cloud
+## Running librocat.com
 
 Run these from `apps/web`; `--prod` targets production.
 
@@ -45,7 +45,7 @@ Run these from `apps/web`; `--prod` targets production.
   - The recipient is `LIBROCAT_FUNNEL_EMAIL` on the Convex deployment
     (`npx convex env set --prod LIBROCAT_FUNNEL_EMAIL <address>`; separate
     several addresses with commas). Unset, nothing is sent.
-- **Analytics:** Vercel Web Analytics on every page of Cloud, the
+- **Analytics:** Vercel Web Analytics on every page of librocat.com, the
   dashboard's too, plus a few named events (`src/lib/analytics.ts`; the
   privacy page lists them). A page view reports its route, never what the
   page shows: no id, search, title, or token leaves the browser, and an

@@ -5,14 +5,14 @@ import { site } from "@/lib/site";
 export const metadata = {
   title: "Privacy | librocat",
   description:
-    "What librocat Cloud keeps, what it sends to which provider and why, what it counts about use, and how to export or delete everything.",
+    "What librocat keeps, what it sends to which provider and why, what it counts about use, and how to export or delete everything.",
   alternates: { canonical: "/privacy" },
 };
 
 const sections = [
   {
     title: "Who we are",
-    body: `${site.company}, a Delaware corporation, operates librocat Cloud and is the controller of the personal data described here. For what a team's library holds, its owner decides what goes in, and we process it for them; teams can ask us for a data processing addendum. Contact: ${site.contact}. This page covers librocat Cloud and the librocat.com site. A librocat you self-host sends us nothing.`,
+    body: `${site.company}, a Delaware corporation, operates librocat at librocat.com and is the controller of the personal data described here. For what a team's library holds, its owner decides what goes in, and we process it for them; teams can ask us for a data processing addendum. Contact: ${site.contact}. This page covers librocat at librocat.com. A librocat you self-host sends us nothing.`,
   },
   {
     title: "What we collect",
@@ -20,7 +20,7 @@ const sections = [
   },
   {
     title: "How we use it, and why",
-    body: "To provide Cloud under our agreement with you: to store, index, and serve your library, sign you in, bill your plan, and send the emails the service needs. To keep Cloud secure and working, which is our legitimate interest: rate limits, abuse prevention, fixing problems, and aggregate counts of how it is used. To send Libro's report (weekly on paid plans, monthly on Free) unless you turn it off. And where the law requires it. We do not sell your data, share it for advertising, or train models on it.",
+    body: "To provide librocat under our agreement with you: to store, index, and serve your library, sign you in, bill your plan, and send the emails the service needs. To keep librocat secure and working, which is our legitimate interest: rate limits, abuse prevention, fixing problems, and aggregate counts of how it is used. To send Libro's report (weekly on paid plans, monthly on Free) unless you turn it off. And where the law requires it. We do not sell your data, share it for advertising, or train models on it.",
   },
   {
     title: "The model that reads it",
@@ -40,7 +40,7 @@ const sections = [
   },
   {
     title: "Cookies",
-    body: "Essential cookies keep you signed in to the dashboard and secure the sign-in and agent-approval steps. On the sign-up, sign-in, and password-reset forms, Vercel's BotID runs a check in your browser and may set its own security cookies, to tell a person from a bot. There are no analytics or advertising cookies. librocat Cloud counts page views and a few actions with Vercel Web Analytics, which sets no cookie. A page view records the kind of page, never what it shows: a concept, a kept source, or an invite is recorded as its kind of page, without its name, id, or code, and no address's query (a search, a saved page's title, a token) is recorded. The actions are signing up, approving an agent, creating a library, attaching a file (its type and a size range), saving a link, creating an invite link, copying an install command or a desktop agent's step (which one, and whether on the home page or Connect), starting checkout (the plan and how often it bills), turning pay-as-you-go on or off, setting its cap, and exporting an index; none carries anything your library holds. Vercel Speed Insights, which sets no cookie either, measures how fast each kind of page loads and responds to you, recorded the same way, by kind of page. With each, Vercel records the site you came from, your country, and your device and browser type, and tells visitors apart by a hash of the request that is discarded after 24 hours.",
+    body: "Essential cookies keep you signed in to the dashboard and secure the sign-in and agent-approval steps. On the sign-up, sign-in, and password-reset forms, Vercel's BotID runs a check in your browser and may set its own security cookies, to tell a person from a bot. There are no analytics or advertising cookies. librocat.com counts page views and a few actions with Vercel Web Analytics, which sets no cookie. A page view records the kind of page, never what it shows: a concept, a kept source, or an invite is recorded as its kind of page, without its name, id, or code, and no address's query (a search, a saved page's title, a token) is recorded. The actions are signing up, approving an agent, creating a library, attaching a file (its type and a size range), saving a link, creating an invite link, copying an install command or a desktop agent's step (which one, and whether on the home page or Connect), starting checkout (the plan and how often it bills), turning pay-as-you-go on or off, setting its cap, and exporting an index; none carries anything your library holds. Vercel Speed Insights, which sets no cookie either, measures how fast each kind of page loads and responds to you, recorded the same way, by kind of page. With each, Vercel records the site you came from, your country, and your device and browser type, and tells visitors apart by a hash of the request that is discarded after 24 hours.",
   },
   {
     title: "Emails",
@@ -48,7 +48,7 @@ const sections = [
   },
   {
     title: "Your rights",
-    body: `You can see, export, and delete your data yourself: Export, in Settings, downloads your whole library as an OKF zip, with your kept sources and attached files beside it (the files as the month's file transfer allows), that Import, in another librocat's Settings, copies in, Cloud or self-hosted; the delete buttons described above erase it. You can also ask us at ${site.contact} to access, correct, delete, or move your personal data, to restrict or object to how we use it, or to withdraw a consent you gave. We answer within 30 days. Depending on where you live (for example the EU, the UK, or California), the law gives you these rights, and you can also complain to your data protection authority.`,
+    body: `You can see, export, and delete your data yourself: Export, in Settings, downloads your whole library as an OKF zip, with your kept sources and attached files beside it (the files as the month's file transfer allows), that Import, in another librocat's Settings, copies in, hosted or self-hosted; the delete buttons described above erase it. You can also ask us at ${site.contact} to access, correct, delete, or move your personal data, to restrict or object to how we use it, or to withdraw a consent you gave. We answer within 30 days. Depending on where you live (for example the EU, the UK, or California), the law gives you these rights, and you can also complain to your data protection authority.`,
   },
   {
     title: "Children",

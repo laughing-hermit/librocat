@@ -3,7 +3,7 @@
  * What it runs on, then one small real call, on fixed text, never a
  * library's: a few hundred tokens.
  *
- *   npx convex run probe:models                   # librocat Cloud, or a dev deployment
+ *   npx convex run probe:models                   # librocat.com, or a dev deployment
  *   ./models.sh                                   # self-hosted (self-host/)
  *   npx convex run probe:models '{"calls": false}'   # what it runs on, no call
  *   npx convex run probe:judge                    # how well the System One does librocat's jobs

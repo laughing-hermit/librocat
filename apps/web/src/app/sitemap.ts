@@ -5,7 +5,7 @@ import { site } from "../lib/site";
 
 const BASE = "https://librocat.com";
 
-// librocat Cloud's public pages. The legal ones change together, on the
+// librocat.com's public pages. The legal ones change together, on the
 // date at their top (site.legalUpdated).
 export default function sitemap(): MetadataRoute.Sitemap {
   if (selfHost) return [];

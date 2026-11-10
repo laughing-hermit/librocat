@@ -141,7 +141,7 @@ describe("the email", () => {
     expect(text).toContain("Came back            3 (38%)");
     // A tie (2 lost before each): the earlier step, since fixing it helps every step after.
     expect(text).toContain('Most people stopped before "Connected an agent" (2 of 8)');
-    expect(text).toContain("vercel.com/johncaris-projects/librocat/analytics");
+    expect(text).toContain("vercel.com/laughinghermit/librocat/analytics");
     // Refused files, by kind: whether people want recordings kept.
     expect(text).toContain("Files refused        7 (audio 4, video 2, other 1)");
     // The most one library keeps, against the plans' ceilings.

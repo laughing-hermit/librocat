@@ -27,7 +27,7 @@ const PAGE = 500;
 /** Each approval's app is a lookup of its agent's name, so approvals are read a hundred at a time. */
 const CONSENT_PAGE = 100;
 /** Where librocat.com's page views and events are counted (Vercel Web Analytics, by route). */
-const VISITORS_URL = "https://vercel.com/johncaris-projects/librocat/analytics";
+const VISITORS_URL = "https://vercel.com/laughinghermit/librocat/analytics";
 
 /** One person who signed up, and what they did in their first week. */
 export type Person = {
